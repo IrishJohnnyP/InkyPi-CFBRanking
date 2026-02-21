@@ -1,0 +1,57 @@
+<div class="form-group">
+  <label for="poll" class="form-label">Ranking source</label>
+  <select class="form-select" id="poll" name="poll">
+    <option value="auto">Auto (most recent available)</option>
+    <option value="ap">AP Top 25</option>
+    <option value="coaches">Coaches Poll</option>
+    <option value="cfp">CFP (Playoff)</option>
+  </select>
+</div>
+
+<div class="form-group mt-3">
+  <label for="top_n" class="form-label">List size (Top N)</label>
+  <input class="form-control" type="number" id="top_n" name="top_n" min="1" max="25" value="20">
+  <small class="form-text text-muted">1–25 (default 20)</small>
+</div>
+
+<div class="form-group mt-3">
+  <label for="screen_size" class="form-label">Render size</label>
+  <select class="form-select" id="screen_size" name="screen_size">
+    <option value="auto">Auto (use device resolution)</option>
+    <option value="800x480">800 × 480</option>
+    <option value="1600x1200">1600 × 1200</option>
+  </select>
+</div>
+
+<div class="form-check mt-3">
+  <input class="form-check-input" type="checkbox" id="show_record" name="show_record">
+  <label class="form-check-label" for="show_record">Show record</label>
+  <small class="form-text text-muted d-block">Records are automatically hidden when Top N > 20 to prevent crowding.</small>
+</div>
+
+<div class="form-check mt-2">
+  <input class="form-check-input" type="checkbox" id="show_meta" name="show_meta">
+  <label class="form-check-label" for="show_meta">Show season/week (if available)</label>
+</div>
+
+<div class="form-group mt-3">
+  <label for="cache_minutes" class="form-label">Cache (minutes)</label>
+  <input class="form-control" type="number" id="cache_minutes" name="cache_minutes" min="0" max="1440" value="30">
+  <small class="form-text text-muted">0 disables caching.</small>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (loadPluginSettings) {
+      document.getElementById('poll').value = pluginSettings.poll || 'auto';
+      document.getElementById('top_n').value = pluginSettings.top_n || 20;
+      document.getElementById('screen_size').value = pluginSettings.screen_size || 'auto';
+      document.getElementById('show_record').checked = (pluginSettings.show_record ?? true);
+      document.getElementById('show_meta').checked = (pluginSettings.show_meta ?? true);
+      document.getElementById('cache_minutes').value = pluginSettings.cache_minutes || 30;
+    } else {
+      document.getElementById('show_record').checked = true;
+      document.getElementById('show_meta').checked = true;
+    }
+  });
+</script>
