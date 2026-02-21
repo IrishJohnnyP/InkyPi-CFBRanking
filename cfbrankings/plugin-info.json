@@ -1,6 +1,6 @@
 {
   "display_name": "CFB Rankings",
   "id": "cfbrankings",
-  "class": "CfbRankings"
+  "class": "CfbRankings",
   "repository": "https://github.com/IrishJohnnyP/InkyPi-CFBRanking"
 }
