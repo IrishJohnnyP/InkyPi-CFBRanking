@@ -3,8 +3,12 @@
   height: 100%;
   box-sizing: border-box;
   padding: 3dvh 3dvw;
-  /* Jost is used by other InkyPi plugins and renders cleanly on e-ink */
+
+  /* E‑ink friendly: use a clean sans-serif; prefer Jost (used by other InkyPi render plugins) */
   font-family: "Jost", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+
+  /* Make text fatter by default */
+  font-weight: 600;
 
   /* Base scale for row text; modified by font-* classes */
   --scale: 1.0;
@@ -26,22 +30,25 @@
 
 .title {
   font-size: calc(min(4.0dvh, 4.0dvw) * var(--title-scale));
-  font-weight: 700;
+  font-weight: 800;
   line-height: 1.1;
 }
 
 .meta {
   font-size: calc(min(2.0dvh, 2.0dvw) * var(--scale));
+  font-weight: 600;
   opacity: 0.85;
 }
 
 .poll-date {
   font-size: calc(min(1.8dvh, 1.8dvw) * var(--scale));
+  font-weight: 600;
   opacity: 0.80;
 }
 
 .note {
   font-size: calc(min(1.8dvh, 1.8dvw) * var(--scale));
+  font-weight: 600;
   opacity: 0.75;
   font-style: italic;
 }
@@ -61,7 +68,7 @@
 }
 
 .rank {
-  font-weight: 700;
+  font-weight: 800;
   font-size: calc(min(2.6dvh, 2.6dvw) * var(--scale));
   width: 3ch;
 }
@@ -78,11 +85,12 @@
   height: calc(min(3.2dvh, 3.2dvw) * var(--scale));
   object-fit: contain;
   /* Improve legibility on monochrome e-ink */
-  filter: grayscale(100%) contrast(120%);
+  filter: grayscale(100%) contrast(125%);
 }
 
 .team {
   font-size: calc(min(2.6dvh, 2.6dvw) * var(--scale));
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -90,6 +98,7 @@
 
 .record {
   font-size: calc(min(2.2dvh, 2.2dvw) * var(--scale));
+  font-weight: 650;
   opacity: 0.9;
   white-space: nowrap;
 }
