@@ -13,10 +13,10 @@ ESPN_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/coll
 class CfbRankings(BasePlugin):
     """College Football Rankings plugin.
 
-    v20 fixes:
-      - Boolean settings are respected independently: record, nickname, movement.
-      - Record checkbox applies regardless of Top N (no auto-hide based on list size).
-      - Robust bool parsing (handles 'false' properly).
+    - Selects AP/Coaches/CFP from ESPN rankings feed and always chooses the most recent poll instance.
+    - Optional toggles: record, movement, nickname, meta.
+    - Compact mode for tighter spacing.
+    - Updated timestamp is shown in upper-right and contains only date + time.
     """
 
     _cache: Dict[str, Any] = {"ts": 0.0, "data": None}
@@ -38,6 +38,7 @@ class CfbRankings(BasePlugin):
         show_movement = self._to_bool(settings.get("show_movement", True))
         show_nickname = self._to_bool(settings.get("show_nickname", True))
         show_meta = self._to_bool(settings.get("show_meta", True))
+        compact_mode = self._to_bool(settings.get("compact_mode", False))
 
         cache_minutes = max(0, min(1440, int(settings.get("cache_minutes") or 30)))
         ttl = cache_minutes * 60
@@ -69,17 +70,17 @@ class CfbRankings(BasePlugin):
             elif season:
                 meta = f"Season {season}"
 
-        poll_date = self._format_poll_date(poll, poll_name, device_config)
+        poll_date = self._format_poll_date(poll, device_config)
 
         template_params = {
             "title": title,
             "meta": meta,
             "poll_date": poll_date,
-            "note": "",
             "rows": rows,
             "show_record": bool(show_record),
             "show_movement": bool(show_movement),
             "show_nickname": bool(show_nickname),
+            "compact_mode": bool(compact_mode),
             "two_column": two_column,
             "top_n": top_n,
             "font_size": font_size,
@@ -87,6 +88,10 @@ class CfbRankings(BasePlugin):
         }
 
         return self.render_image(dimensions, "cfbrankings.html", "cfbrankings.css", template_params)
+
+    # ----------------------------
+    # Fetch/cache
+    # ----------------------------
 
     def _get_rankings_cached(self, ttl: int) -> Dict[str, Any]:
         now = time.time()
@@ -103,6 +108,10 @@ class CfbRankings(BasePlugin):
             self._cache["data"] = data
 
         return data
+
+    # ----------------------------
+    # Poll selection (most recent)
+    # ----------------------------
 
     def _pick_poll(self, data: Dict[str, Any], choice: str) -> Optional[Dict[str, Any]]:
         polls = data.get("rankings")
@@ -209,6 +218,10 @@ class CfbRankings(BasePlugin):
             ranks = []
         return [r for r in ranks if isinstance(r, dict)]
 
+    # ----------------------------
+    # Date formatting (date+time only)
+    # ----------------------------
+
     def _get_tzinfo(self, device_config):
         try:
             tz_name = device_config.get_config("timezone")
@@ -222,7 +235,7 @@ class CfbRankings(BasePlugin):
         except Exception:
             return None
 
-    def _format_poll_date(self, poll: Dict[str, Any], poll_name: str, device_config) -> str:
+    def _format_poll_date(self, poll: Dict[str, Any], device_config) -> str:
         from datetime import datetime, timezone
         date_str = None
         for k in ("date", "lastUpdated", "lastUpdate", "updated", "updateDate"):
@@ -241,17 +254,19 @@ class CfbRankings(BasePlugin):
                 dt = dt.replace(tzinfo=timezone.utc)
             dt_local = dt.astimezone(tzinfo) if tzinfo else dt.astimezone()
 
+            date_part = dt_local.strftime("%b %d, %Y")
             hour = dt_local.strftime("%I").lstrip("0") or "12"
             minute = dt_local.strftime("%M")
             ampm = dt_local.strftime("%p")
             tz_abbr = (dt_local.strftime("%Z") or "").strip()
-            date_part = dt_local.strftime("%b %d, %Y")
-            time_part = f"{hour}:{minute} {ampm}"
-            if tz_abbr:
-                time_part = f"{time_part} {tz_abbr}"
-            return f"Updated {date_part} {time_part} • {poll_name}"
+            time_part = f"{hour}:{minute} {ampm}" + (f" {tz_abbr}" if tz_abbr else "")
+            return f"{date_part} {time_part}"
         except Exception:
-            return f"Updated {date_str} • {poll_name}"
+            return date_str
+
+    # ----------------------------
+    # Rows
+    # ----------------------------
 
     def _build_rows(self, ranks: List[Dict[str, Any]], top_n: int, show_record: bool):
         rows = []
@@ -326,6 +341,10 @@ class CfbRankings(BasePlugin):
 
         return rows
 
+    # ----------------------------
+    # Utilities
+    # ----------------------------
+
     def _get_dimensions(self, settings: Dict[str, Any], device_config) -> Tuple[int, int]:
         screen_size = (settings.get("screen_size") or "auto").strip().lower()
         if screen_size == "800x480":
@@ -339,12 +358,10 @@ class CfbRankings(BasePlugin):
         return dims
 
     def _to_bool(self, v: Any) -> bool:
-        """Robust boolean parsing for plugin settings."""
         if isinstance(v, bool):
             return v
         if v is None:
             return False
-        # If multiple values somehow come through, prefer the last
         if isinstance(v, (list, tuple)) and v:
             v = v[-1]
         if isinstance(v, str):
@@ -353,6 +370,5 @@ class CfbRankings(BasePlugin):
                 return True
             if s in ("0", "false", "no", "off", ""):
                 return False
-            # fallback: non-empty string treated as True
             return True
         return bool(v)

@@ -39,11 +39,12 @@
 <input type="hidden" id="show_movement" name="show_movement" value="true" />
 <input type="hidden" id="show_nickname" name="show_nickname" value="true" />
 <input type="hidden" id="show_meta" name="show_meta" value="true" />
+<input type="hidden" id="compact_mode" name="compact_mode" value="false" />
 
 <div class="form-check mt-3">
   <input class="form-check-input" type="checkbox" id="show_record_checkbox">
   <label class="form-check-label" for="show_record_checkbox">Show record</label>
-  <small class="form-text text-muted d-block">Record visibility is controlled only by this checkbox (even for Top 25).</small>
+  <small class="form-text text-muted d-block">Applies regardless of Top N.</small>
 </div>
 
 <div class="form-check mt-2">
@@ -59,6 +60,12 @@
 <div class="form-check mt-2">
   <input class="form-check-input" type="checkbox" id="show_meta_checkbox">
   <label class="form-check-label" for="show_meta_checkbox">Show season/week (if available)</label>
+</div>
+
+<div class="form-check mt-2">
+  <input class="form-check-input" type="checkbox" id="compact_mode_checkbox">
+  <label class="form-check-label" for="compact_mode_checkbox">Compact mode</label>
+  <small class="form-text text-muted d-block">Tighter spacing for Top 25 / larger fonts.</small>
 </div>
 
 <div class="form-group mt-3">
@@ -85,22 +92,17 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    // Load saved values
     if (typeof loadPluginSettings !== 'undefined') {
       document.getElementById('poll').value = pluginSettings.poll || 'auto';
       document.getElementById('top_n').value = pluginSettings.top_n || 20;
       document.getElementById('font_size').value = pluginSettings.font_size || 'normal';
       document.getElementById('screen_size').value = pluginSettings.screen_size || 'auto';
 
-      const rec = toBool(pluginSettings.show_record, true);
-      const mov = toBool(pluginSettings.show_movement, true);
-      const nick = toBool(pluginSettings.show_nickname, true);
-      const meta = toBool(pluginSettings.show_meta, true);
-
-      document.getElementById('show_record_checkbox').checked = rec;
-      document.getElementById('show_movement_checkbox').checked = mov;
-      document.getElementById('show_nickname_checkbox').checked = nick;
-      document.getElementById('show_meta_checkbox').checked = meta;
+      document.getElementById('show_record_checkbox').checked = toBool(pluginSettings.show_record, true);
+      document.getElementById('show_movement_checkbox').checked = toBool(pluginSettings.show_movement, true);
+      document.getElementById('show_nickname_checkbox').checked = toBool(pluginSettings.show_nickname, true);
+      document.getElementById('show_meta_checkbox').checked = toBool(pluginSettings.show_meta, true);
+      document.getElementById('compact_mode_checkbox').checked = toBool(pluginSettings.compact_mode, false);
 
       document.getElementById('cache_minutes').value = pluginSettings.cache_minutes || 30;
     } else {
@@ -108,18 +110,21 @@
       document.getElementById('show_movement_checkbox').checked = true;
       document.getElementById('show_nickname_checkbox').checked = true;
       document.getElementById('show_meta_checkbox').checked = true;
+      document.getElementById('compact_mode_checkbox').checked = false;
     }
 
-    // Initialize hidden values
-    syncHidden('show_record', 'show_record_checkbox');
-    syncHidden('show_movement', 'show_movement_checkbox');
-    syncHidden('show_nickname', 'show_nickname_checkbox');
-    syncHidden('show_meta', 'show_meta_checkbox');
+    // init hidden values
+    syncHidden('show_record','show_record_checkbox');
+    syncHidden('show_movement','show_movement_checkbox');
+    syncHidden('show_nickname','show_nickname_checkbox');
+    syncHidden('show_meta','show_meta_checkbox');
+    syncHidden('compact_mode','compact_mode_checkbox');
 
-    // Keep hidden values in sync
+    // keep in sync
     document.getElementById('show_record_checkbox').addEventListener('change', () => syncHidden('show_record','show_record_checkbox'));
     document.getElementById('show_movement_checkbox').addEventListener('change', () => syncHidden('show_movement','show_movement_checkbox'));
     document.getElementById('show_nickname_checkbox').addEventListener('change', () => syncHidden('show_nickname','show_nickname_checkbox'));
     document.getElementById('show_meta_checkbox').addEventListener('change', () => syncHidden('show_meta','show_meta_checkbox'));
+    document.getElementById('compact_mode_checkbox').addEventListener('change', () => syncHidden('compact_mode','compact_mode_checkbox'));
   });
 </script>
