@@ -25,7 +25,7 @@
           </div>
         </div>
         {% if show_record %}
-          <div class="record">{{ r.record }}{% if r.move_dir == 'up' %}<span class="move move-up">▲{{ r.move_delta }}</span>{% elif r.move_dir == 'down' %}<span class="move move-down">▼{{ r.move_delta }}</span>{% endif %}</div>
+          <div class="record">{{ r.record }}{% if show_movement %}{% if r.move_dir == 'up' %}<span class="move move-up">▲{{ r.move_delta }}</span>{% elif r.move_dir == 'down' %}<span class="move move-down">▼{{ r.move_delta }}</span>{% endif %}{% endif %}</div>
         {% endif %}
       </div>
     {% endfor %}
