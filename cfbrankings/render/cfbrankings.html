@@ -1,7 +1,7 @@
 {% extends "plugin.html" %}
 
 {% block content %}
-<div class="cfb-container {% if two_column %}two-column{% endif %}">
+<div class="cfb-container font-{{ font_size }} {% if two_column %}two-column{% endif %}">
   <div class="header">
     <div class="title">{{ title }}</div>
     {% if meta %}<div class="meta">{{ meta }}</div>{% endif %}
