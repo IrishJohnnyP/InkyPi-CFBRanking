@@ -7,29 +7,24 @@ from utils.http_client import get_http_session
 
 logger = logging.getLogger(__name__)
 
-SITE_API_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
-WEB_API_RANKINGS_URL = "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
-
-# User-provided mapping: type=2 represents the College Football Playoff poll
-CFP_TYPE_ID = 2
+# ESPN rankings endpoint (returns multiple polls)
+ESPN_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
 
 
 class CfbRankings(BasePlugin):
-    """College Football Rankings (AP / Coaches / CFP)
+    """College Football Rankings plugin.
 
-    CFP support (FIXED):
-      - Fetch CFP via: site.web.api.espn.com ... /rankings?type=2
-      - IMPORTANT: Some responses still include multiple poll blocks; we now explicitly select the CFP
-        poll block using id/type/name heuristics rather than taking the first item (which can be AP).
+    v15 change:
+      - Always select the MOST RECENT matching poll (AP/Coaches/CFP) using date/lastUpdated fields.
+      - No year selection required.
 
-    Display:
-      - Font size selector
-      - Bold weights for e-ink
+    UI:
+      - Font size selector (normal/large/larger/largest)
       - Two columns when Top N > 15
-      - School logo + School name, nickname in smaller font
+      - Logos + School (Nickname) with nickname styled smaller
     """
 
-    _cache: Dict[str, Any] = {"ts": {}, "data": {}}
+    _cache: Dict[str, Any] = {"ts": 0.0, "data": None}
 
     def generate_settings_template(self):
         params = super().generate_settings_template()
@@ -44,8 +39,6 @@ class CfbRankings(BasePlugin):
         if font_size not in ("normal", "large", "larger", "largest"):
             font_size = "normal"
 
-        year = self._parse_year(settings.get("year"))
-
         show_record_user = self._to_bool(settings.get("show_record", True))
         show_meta = self._to_bool(settings.get("show_meta", True))
         show_record = bool(show_record_user and top_n <= 20)
@@ -56,7 +49,15 @@ class CfbRankings(BasePlugin):
         dimensions = self._get_dimensions(settings, device_config)
         two_column = top_n > 15
 
-        data, poll = self._get_poll_data(poll_choice, year, ttl)
+        data = self._get_rankings_cached(ttl)
+        poll = self._pick_poll(data, poll_choice)
+        if poll is None:
+            if poll_choice == "cfp":
+                raise RuntimeError(
+                    "CFP poll not found in ESPN rankings response. "
+                    "Outside the committee ranking window, ESPN may not include the CFP poll in the feed."
+                )
+            raise RuntimeError("Selected poll not found in ESPN response.")
 
         poll_name = (poll.get("name") or poll.get("shortName") or "College Football Rankings").strip()
         title = poll_name
@@ -66,7 +67,7 @@ class CfbRankings(BasePlugin):
 
         meta = ""
         if show_meta:
-            season = (data.get("season") or data.get("requestedSeason") or data.get("currentSeason") or {}).get("year")
+            season = (data.get("season") or {}).get("year")
             week = (data.get("week") or {}).get("number")
             if season and week:
                 meta = f"Season {season} • Week {week}"
@@ -91,97 +92,127 @@ class CfbRankings(BasePlugin):
         return self.render_image(dimensions, "cfbrankings.html", "cfbrankings.css", template_params)
 
     # ----------------------------
-    # Poll fetching
+    # Data fetch/cache
     # ----------------------------
 
-    def _get_poll_data(self, poll_choice: str, year: Optional[int], ttl: int) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-        if poll_choice == "cfp":
-            url = f"{WEB_API_RANKINGS_URL}?type={CFP_TYPE_ID}&lang=en&region=us"
-            if year is not None:
-                url += f"&year={year}"
-
-            data = self._fetch_json_cached(url, ttl)
-            poll = self._extract_cfp_poll(data)
-            if poll is None:
-                raise RuntimeError("CFP poll not found in ESPN web API response. Try setting a Year (e.g., 2024).")
-            return data, poll
-
-        # AP/Coaches/Auto
-        data = self._fetch_json_cached(SITE_API_RANKINGS_URL, ttl)
-        poll = self._select_poll(data, poll_choice)
-        if poll is None:
-            raise RuntimeError("No suitable poll found in ESPN response.")
-        return data, poll
-
-    def _fetch_json_cached(self, url: str, ttl: int) -> Dict[str, Any]:
+    def _get_rankings_cached(self, ttl: int) -> Dict[str, Any]:
         now = time.time()
-        ts = self._cache["ts"].get(url, 0.0)
-        if ttl > 0 and url in self._cache["data"] and (now - ts) < ttl:
-            return self._cache["data"][url]
+        if ttl > 0 and self._cache["data"] is not None and (now - self._cache["ts"]) < ttl:
+            return self._cache["data"]
 
         session = get_http_session()
-        resp = session.get(url, timeout=20)
+        resp = session.get(ESPN_RANKINGS_URL, timeout=20)
         resp.raise_for_status()
         data = resp.json()
 
         if ttl > 0:
-            self._cache["ts"][url] = now
-            self._cache["data"][url] = data
+            self._cache["ts"] = now
+            self._cache["data"] = data
 
         return data
 
     # ----------------------------
-    # CFP poll extraction (FIX)
+    # Poll selection (MOST RECENT)
     # ----------------------------
 
-    def _extract_cfp_poll(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """Select the CFP poll block from the response.
-
-        The bug you saw (CFP showing AP) happens when the response contains multiple polls and
-        code picks the first. Here we explicitly choose the CFP poll.
-        """
-        if not isinstance(data, dict):
+    def _pick_poll(self, data: Dict[str, Any], choice: str) -> Optional[Dict[str, Any]]:
+        polls = data.get("rankings")
+        if isinstance(polls, dict):
+            polls = polls.get("items") or polls.get("rankings")
+        if not isinstance(polls, list):
             return None
 
-        def looks_like_cfp(p: Dict[str, Any]) -> bool:
-            if not isinstance(p, dict):
-                return False
-            # Match numeric identifiers
-            if str(p.get("id")) == str(CFP_TYPE_ID) or str(p.get("type")) == str(CFP_TYPE_ID):
+        def norm(s: Any) -> str:
+            return str(s or "").strip().lower()
+
+        def parse_date(p: Dict[str, Any]) -> float:
+            """Return epoch seconds for best-available poll timestamp."""
+            import datetime
+            for k in ("date", "lastUpdated", "lastUpdate", "updated", "updateDate"):
+                v = p.get(k)
+                if not v:
+                    continue
+                try:
+                    ds = str(v).replace("Z", "+00:00")
+                    dt = datetime.datetime.fromisoformat(ds)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=datetime.timezone.utc)
+                    return dt.timestamp()
+                except Exception:
+                    pass
+            occ = p.get("occurrence")
+            if isinstance(occ, dict):
+                for k in ("startDate", "endDate"):
+                    v = occ.get(k)
+                    if not v:
+                        continue
+                    try:
+                        ds = str(v).replace("Z", "+00:00")
+                        dt = datetime.datetime.fromisoformat(ds)
+                        if dt.tzinfo is None:
+                            dt = dt.replace(tzinfo=datetime.timezone.utc)
+                        return dt.timestamp()
+                    except Exception:
+                        pass
+            return 0.0
+
+        def is_ap(p: Dict[str, Any]) -> bool:
+            t = norm(p.get("type"))
+            if t == "ap":
                 return True
-            # Match string identifiers
-            t = str(p.get("type") or "").lower()
-            if t == "cfp":
+            n = norm(p.get("name"))
+            s = norm(p.get("shortName"))
+            return ("ap" in s) or ("ap top" in n)
+
+        def is_coaches(p: Dict[str, Any]) -> bool:
+            t = norm(p.get("type"))
+            if t == "coaches":
                 return True
-            name = str(p.get("name") or "").lower()
-            short = str(p.get("shortName") or p.get("abbreviation") or "").lower()
-            head = str(p.get("headline") or p.get("shortHeadline") or "").lower()
-            blob = " ".join([name, short, head])
-            return ("playoff" in blob) or ("cfp" in blob) or ("selection committee" in blob)
+            n = norm(p.get("name"))
+            s = norm(p.get("shortName"))
+            return ("coaches" in n) or ("afca" in n) or ("coaches" in s)
 
-        # If data itself is poll-like
-        if "ranks" in data and isinstance(data.get("ranks"), (list, dict)):
-            # Only accept directly if it looks like CFP, otherwise continue search
-            if looks_like_cfp(data):
-                return data
+        def is_cfp(p: Dict[str, Any]) -> bool:
+            n = norm(p.get("name"))
+            if n == "playoff selection committee rankings":
+                return True
+            if "playoff selection committee" in n:
+                return True
+            s = norm(p.get("shortName"))
+            t = norm(p.get("type"))
+            h = norm(p.get("headline"))
+            blob = " ".join([n, s, t, h])
+            return ("playoff" in blob and "committee" in blob) or ("cfp" in blob) or ("selection committee" in blob)
 
-        # Common case: rankings list
-        rankings = data.get("rankings")
-        if isinstance(rankings, dict):
-            rankings = rankings.get("items") or rankings.get("rankings")
+        ap_list = [p for p in polls if isinstance(p, dict) and is_ap(p)]
+        coaches_list = [p for p in polls if isinstance(p, dict) and is_coaches(p)]
+        cfp_list = [p for p in polls if isinstance(p, dict) and is_cfp(p)]
 
-        if isinstance(rankings, list):
-            # Prefer CFP match
-            for p in rankings:
-                if isinstance(p, dict) and looks_like_cfp(p):
-                    return p
+        ap_list.sort(key=parse_date, reverse=True)
+        coaches_list.sort(key=parse_date, reverse=True)
+        cfp_list.sort(key=parse_date, reverse=True)
 
-        # Sometimes nested
-        ranking = data.get("ranking")
-        if isinstance(ranking, dict) and "ranks" in ranking:
-            return ranking if looks_like_cfp(ranking) else ranking
+        if choice == "cfp":
+            return cfp_list[0] if cfp_list else None
+        if choice == "ap":
+            return ap_list[0] if ap_list else None
+        if choice == "coaches":
+            return coaches_list[0] if coaches_list else None
 
-        return None
+        # AUTO
+        candidates = []
+        if cfp_list:
+            candidates.append(cfp_list[0])
+        if ap_list:
+            candidates.append(ap_list[0])
+        if coaches_list:
+            candidates.append(coaches_list[0])
+
+        if not candidates:
+            return polls[0] if polls and isinstance(polls[0], dict) else None
+
+        candidates.sort(key=parse_date, reverse=True)
+        return candidates[0]
 
     def _extract_ranks(self, poll: Dict[str, Any]) -> List[Dict[str, Any]]:
         ranks = poll.get("ranks")
@@ -192,65 +223,6 @@ class CfbRankings(BasePlugin):
         if not isinstance(ranks, list):
             ranks = []
         return [r for r in ranks if isinstance(r, dict)]
-
-    # ----------------------------
-    # Poll selection (AP/Coaches/Auto)
-    # ----------------------------
-
-    def _select_poll(self, data: Dict[str, Any], choice: str) -> Optional[Dict[str, Any]]:
-        from datetime import datetime, timezone
-
-        polls = data.get("rankings")
-        if isinstance(polls, dict):
-            polls = polls.get("items") or polls.get("rankings")
-        if not isinstance(polls, list) or not polls:
-            return None
-
-        def parse_date(p: Dict[str, Any]) -> float:
-            for k in ("date", "lastUpdated", "lastUpdate", "updated", "updateDate"):
-                v = p.get(k)
-                if not v:
-                    continue
-                try:
-                    ds = str(v).replace("Z", "+00:00")
-                    dt = datetime.fromisoformat(ds)
-                    if dt.tzinfo is None:
-                        dt = dt.replace(tzinfo=timezone.utc)
-                    return dt.timestamp()
-                except Exception:
-                    pass
-            return 0.0
-
-        def kind(p: Dict[str, Any]) -> str:
-            t = str(p.get("type") or "").lower()
-            if t in ("ap", "coaches"):
-                return t
-            name = str(p.get("name") or "").lower()
-            short = str(p.get("shortName") or p.get("abbreviation") or "").lower()
-            head = str(p.get("headline") or "").lower()
-            blob = " ".join([name, short, head])
-            if "ap" in blob and "poll" in blob:
-                return "ap"
-            if "coaches" in blob or "afca" in blob:
-                return "coaches"
-            return ""
-
-        if choice in ("ap", "coaches"):
-            matches = [p for p in polls if kind(p) == choice]
-            if not matches:
-                return None
-            matches.sort(key=parse_date, reverse=True)
-            return matches[0]
-
-        # AUTO
-        order = {"ap": 2, "coaches": 1}
-        candidates = [(parse_date(p), order.get(kind(p), 0), p) for p in polls if kind(p) in order]
-        if candidates:
-            candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
-            return candidates[0][2]
-
-        polls.sort(key=parse_date, reverse=True)
-        return polls[0]
 
     # ----------------------------
     # Date formatting
@@ -288,7 +260,6 @@ class CfbRankings(BasePlugin):
                 dt = dt.replace(tzinfo=timezone.utc)
             dt_local = dt.astimezone(tzinfo) if tzinfo else dt.astimezone()
 
-            label = (poll_name or "").strip()
             hour = dt_local.strftime("%I").lstrip("0") or "12"
             minute = dt_local.strftime("%M")
             ampm = dt_local.strftime("%p")
@@ -297,13 +268,9 @@ class CfbRankings(BasePlugin):
             time_part = f"{hour}:{minute} {ampm}"
             if tz_abbr:
                 time_part = f"{time_part} {tz_abbr}"
-            if label:
-                return f"Updated {date_part} {time_part} • {label}"
-            return f"Updated {date_part} {time_part}"
+            return f"Updated {date_part} {time_part} • {poll_name}"
         except Exception:
-            if poll_name:
-                return f"Updated {date_str} • {poll_name}"
-            return f"Updated {date_str}"
+            return f"Updated {date_str} • {poll_name}"
 
     # ----------------------------
     # Rows
@@ -321,7 +288,7 @@ class CfbRankings(BasePlugin):
             nickname = team.get("name") or team.get("nickname") or ""
 
             nick_out = ""
-            if nickname and nickname.lower() not in school.lower():
+            if nickname and nickname.lower() not in str(school).lower():
                 nick_out = nickname
 
             logo = ""
@@ -376,17 +343,3 @@ class CfbRankings(BasePlugin):
         if isinstance(v, str):
             return v.strip().lower() in ("1", "true", "yes", "on", "checked")
         return bool(v)
-
-    def _parse_year(self, v: Any) -> Optional[int]:
-        if v is None:
-            return None
-        try:
-            s = str(v).strip()
-            if not s:
-                return None
-            year = int(s)
-            if 2000 <= year <= 2100:
-                return year
-        except Exception:
-            return None
-        return None

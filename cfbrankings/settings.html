@@ -4,15 +4,9 @@
     <option value="auto">Auto (most recent available)</option>
     <option value="ap">AP Top 25</option>
     <option value="coaches">Coaches Poll</option>
-    <option value="cfp">CFP (Playoff)</option>
+    <option value="cfp">CFP (Selection Committee)</option>
   </select>
-  <small class="form-text text-muted">CFP uses ESPN's web API with <code>?type=2</code>.</small>
-</div>
-
-<div class="form-group mt-3">
-  <label for="year" class="form-label">Year (optional)</label>
-  <input class="form-control" type="number" id="year" name="year" min="2000" max="2100" placeholder="Leave blank for current">
-  <small class="form-text text-muted">Optional: e.g., 2024 for historical data (works with CFP endpoint).</small>
+  <small class="form-text text-muted">All polls are selected from ESPN’s rankings feed; the plugin always chooses the <b>most recent</b> matching poll.</small>
 </div>
 
 <div class="form-group mt-3">
@@ -43,7 +37,7 @@
 <div class="form-check mt-3">
   <input class="form-check-input" type="checkbox" id="show_record" name="show_record">
   <label class="form-check-label" for="show_record">Show record</label>
-  <small class="form-text text-muted d-block">Records are automatically hidden when Top N > 20 to prevent crowding.</small>
+  <small class="form-text text-muted d-block">Records are automatically hidden when Top N &gt; 20 to prevent crowding.</small>
 </div>
 
 <div class="form-check mt-2">
@@ -61,7 +55,6 @@
   document.addEventListener('DOMContentLoaded', () => {
     if (loadPluginSettings) {
       document.getElementById('poll').value = pluginSettings.poll || 'auto';
-      document.getElementById('year').value = pluginSettings.year || '';
       document.getElementById('top_n').value = pluginSettings.top_n || 20;
       document.getElementById('font_size').value = pluginSettings.font_size || 'normal';
       document.getElementById('screen_size').value = pluginSettings.screen_size || 'auto';
