@@ -4,10 +4,7 @@
   box-sizing: border-box;
   padding: 3dvh 3dvw;
   font-family: "Jost", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
-
-  /* Bold defaults for e-ink legibility */
   font-weight: 600;
-
   --scale: 1.0;
   --title-scale: 1.0;
 }
@@ -91,9 +88,7 @@
   white-space: nowrap;
 }
 
-.team .school {
-  font-weight: 800;
-}
+.team .school { font-weight: 800; }
 
 .team .nickname {
   font-size: calc(min(2.2dvh, 2.2dvw) * var(--scale));
