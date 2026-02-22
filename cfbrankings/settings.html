@@ -41,6 +41,11 @@
 </div>
 
 <div class="form-check mt-2">
+  <input class="form-check-input" type="checkbox" id="show_nickname" name="show_nickname">
+  <label class="form-check-label" for="show_nickname">Show nickname (in parentheses)</label>
+</div>
+
+<div class="form-check mt-2">
   <input class="form-check-input" type="checkbox" id="show_meta" name="show_meta">
   <label class="form-check-label" for="show_meta">Show season/week (if available)</label>
 </div>
@@ -59,10 +64,12 @@
       document.getElementById('font_size').value = pluginSettings.font_size || 'normal';
       document.getElementById('screen_size').value = pluginSettings.screen_size || 'auto';
       document.getElementById('show_record').checked = (pluginSettings.show_record ?? true);
+      document.getElementById('show_nickname').checked = (pluginSettings.show_nickname ?? true);
       document.getElementById('show_meta').checked = (pluginSettings.show_meta ?? true);
       document.getElementById('cache_minutes').value = pluginSettings.cache_minutes || 30;
     } else {
       document.getElementById('show_record').checked = true;
+      document.getElementById('show_nickname').checked = true;
       document.getElementById('show_meta').checked = true;
       document.getElementById('font_size').value = 'normal';
     }

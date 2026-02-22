@@ -7,21 +7,19 @@ from utils.http_client import get_http_session
 
 logger = logging.getLogger(__name__)
 
-# ESPN rankings endpoint (returns multiple polls)
 ESPN_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
 
 
 class CfbRankings(BasePlugin):
     """College Football Rankings plugin.
 
-    v15 change:
-      - Always select the MOST RECENT matching poll (AP/Coaches/CFP) using date/lastUpdated fields.
-      - No year selection required.
-
-    UI:
-      - Font size selector (normal/large/larger/largest)
-      - Two columns when Top N > 15
-      - Logos + School (Nickname) with nickname styled smaller
+    Features:
+      - Selects AP/Coaches/CFP from ESPN rankings feed and always chooses the most recent poll instance.
+      - If the API provides previous rank, shows ▲N (green) or ▼N (red) after the record.
+      - Optional nickname display.
+      - Two columns when Top N > 15.
+      - Records auto-hidden when Top N > 20.
+      - Logos + School name.
     """
 
     _cache: Dict[str, Any] = {"ts": 0.0, "data": None}
@@ -40,6 +38,7 @@ class CfbRankings(BasePlugin):
             font_size = "normal"
 
         show_record_user = self._to_bool(settings.get("show_record", True))
+        show_nickname = self._to_bool(settings.get("show_nickname", True))
         show_meta = self._to_bool(settings.get("show_meta", True))
         show_record = bool(show_record_user and top_n <= 20)
 
@@ -54,8 +53,7 @@ class CfbRankings(BasePlugin):
         if poll is None:
             if poll_choice == "cfp":
                 raise RuntimeError(
-                    "CFP poll not found in ESPN rankings response. "
-                    "Outside the committee ranking window, ESPN may not include the CFP poll in the feed."
+                    "CFP poll not found in ESPN rankings response. Outside the committee ranking window, ESPN may omit it."
                 )
             raise RuntimeError("Selected poll not found in ESPN response.")
 
@@ -86,13 +84,14 @@ class CfbRankings(BasePlugin):
             "two_column": two_column,
             "top_n": top_n,
             "font_size": font_size,
+            "show_nickname": show_nickname,
             "plugin_settings": settings,
         }
 
         return self.render_image(dimensions, "cfbrankings.html", "cfbrankings.css", template_params)
 
     # ----------------------------
-    # Data fetch/cache
+    # Fetch/cache
     # ----------------------------
 
     def _get_rankings_cached(self, ttl: int) -> Dict[str, Any]:
@@ -112,7 +111,7 @@ class CfbRankings(BasePlugin):
         return data
 
     # ----------------------------
-    # Poll selection (MOST RECENT)
+    # Poll selection (most recent)
     # ----------------------------
 
     def _pick_poll(self, data: Dict[str, Any], choice: str) -> Optional[Dict[str, Any]]:
@@ -126,7 +125,6 @@ class CfbRankings(BasePlugin):
             return str(s or "").strip().lower()
 
         def parse_date(p: Dict[str, Any]) -> float:
-            """Return epoch seconds for best-available poll timestamp."""
             import datetime
             for k in ("date", "lastUpdated", "lastUpdate", "updated", "updateDate"):
                 v = p.get(k)
@@ -207,10 +205,8 @@ class CfbRankings(BasePlugin):
             candidates.append(ap_list[0])
         if coaches_list:
             candidates.append(coaches_list[0])
-
         if not candidates:
             return polls[0] if polls and isinstance(polls[0], dict) else None
-
         candidates.sort(key=parse_date, reverse=True)
         return candidates[0]
 
@@ -273,13 +269,39 @@ class CfbRankings(BasePlugin):
             return f"Updated {date_str} • {poll_name}"
 
     # ----------------------------
-    # Rows
+    # Rows + movement
     # ----------------------------
 
     def _build_rows(self, ranks: List[Dict[str, Any]], top_n: int, show_record: bool):
         rows = []
+
+        def _to_int(x):
+            try:
+                if x is None:
+                    return None
+                if isinstance(x, str) and not x.strip().isdigit():
+                    return None
+                return int(x)
+            except Exception:
+                return None
+
         for entry in ranks[:top_n]:
             rk = entry.get("current") or entry.get("rank") or entry.get("position") or entry.get("ranking")
+            prev = entry.get("previous")
+
+            cur_i = _to_int(rk)
+            prev_i = _to_int(prev)
+
+            move_dir = ""
+            move_delta = 0
+            if cur_i is not None and prev_i is not None and cur_i != prev_i:
+                if cur_i < prev_i:
+                    move_dir = "up"
+                    move_delta = prev_i - cur_i
+                elif cur_i > prev_i:
+                    move_dir = "down"
+                    move_delta = cur_i - prev_i
+
             team = entry.get("team") or entry.get("school") or {}
             if not isinstance(team, dict):
                 team = {}
@@ -317,6 +339,8 @@ class CfbRankings(BasePlugin):
                 "nickname": nick_out,
                 "logo": logo,
                 "record": rec if show_record else "",
+                "move_dir": move_dir,
+                "move_delta": move_delta,
             })
 
         return rows
