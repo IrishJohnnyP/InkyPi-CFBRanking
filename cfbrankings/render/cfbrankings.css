@@ -104,6 +104,16 @@
   white-space: nowrap;
 }
 
+/* Rank movement arrows (after record) */
+.move {
+  margin-left: 0.5ch;
+  font-weight: 800;
+  font-size: 1.05em;
+  letter-spacing: 0;
+}
+.move-up { color: #0a7d00; }
+.move-down { color: #b00020; }
+
 .two-column .list { column-count: 2; column-gap: 4dvw; }
 .two-column .row { padding: 0.4dvh 0; }
 
