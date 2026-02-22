@@ -13,13 +13,11 @@ ESPN_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/coll
 class CfbRankings(BasePlugin):
     """College Football Rankings plugin.
 
-    Features:
-      - Selects AP/Coaches/CFP from ESPN rankings feed and always chooses the most recent poll instance.
-      - If the API provides previous rank, shows ▲N (green) or ▼N (red) after the record.
-      - Optional nickname display.
-      - Two columns when Top N > 15.
-      - Records auto-hidden when Top N > 20.
-      - Logos + School name.
+    - Selects AP/Coaches/CFP from ESPN rankings feed and always chooses the most recent poll instance.
+    - Movement (▲/▼ plus spots moved) is optional and uses current/previous ranks when provided.
+    - Nickname display is optional.
+    - Two columns when Top N > 15.
+    - Records auto-hidden when Top N > 20.
     """
 
     _cache: Dict[str, Any] = {"ts": 0.0, "data": None}
@@ -38,6 +36,7 @@ class CfbRankings(BasePlugin):
             font_size = "normal"
 
         show_record_user = self._to_bool(settings.get("show_record", True))
+        show_movement = self._to_bool(settings.get("show_movement", True))
         show_nickname = self._to_bool(settings.get("show_nickname", True))
         show_meta = self._to_bool(settings.get("show_meta", True))
         show_record = bool(show_record_user and top_n <= 20)
@@ -81,10 +80,11 @@ class CfbRankings(BasePlugin):
             "note": "",
             "rows": rows,
             "show_record": show_record,
+            "show_movement": show_movement,
+            "show_nickname": show_nickname,
             "two_column": two_column,
             "top_n": top_n,
             "font_size": font_size,
-            "show_nickname": show_nickname,
             "plugin_settings": settings,
         }
 
@@ -197,7 +197,6 @@ class CfbRankings(BasePlugin):
         if choice == "coaches":
             return coaches_list[0] if coaches_list else None
 
-        # AUTO
         candidates = []
         if cfp_list:
             candidates.append(cfp_list[0])
