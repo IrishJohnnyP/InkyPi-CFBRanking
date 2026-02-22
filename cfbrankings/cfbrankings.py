@@ -16,7 +16,7 @@ class CfbRankings(BasePlugin):
     - Font size selector: normal / large / larger / largest
     - Two-column layout whenever Top N > 15
     - Records auto-hidden when Top N > 20
-    - Team line shows logo + School (Nickname)
+    - Team line shows logo + School (Nickname), with nickname styled smaller in the template
     - Uses HTML/CSS render pipeline with style settings enabled
 
     Note on CFP:
@@ -246,9 +246,11 @@ class CfbRankings(BasePlugin):
 
             school = team.get("shortDisplayName") or team.get("location") or team.get("displayName") or team.get("abbreviation") or team.get("name") or "Unknown"
             nickname = team.get("name") or team.get("nickname") or ""
-            display = school
+
+            # Avoid duplication
+            nick_out = ""
             if nickname and nickname.lower() not in school.lower():
-                display = f"{school} ({nickname})"
+                nick_out = nickname
 
             logo = ""
             logos = team.get("logos")
@@ -272,7 +274,8 @@ class CfbRankings(BasePlugin):
 
             rows.append({
                 "rank": rk if rk is not None else "--",
-                "team": display,
+                "school": school,
+                "nickname": nick_out,
                 "logo": logo,
                 "record": rec if show_record else "",
             })
