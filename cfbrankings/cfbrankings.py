@@ -7,24 +7,26 @@ from utils.http_client import get_http_session
 
 logger = logging.getLogger(__name__)
 
-# Base endpoints
 SITE_API_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
-# CFP workaround provided by user: site.web.api + type=2
 WEB_API_RANKINGS_URL = "https://site.web.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
+
+# User-provided mapping: type=2 represents the College Football Playoff poll
+CFP_TYPE_ID = 2
 
 
 class CfbRankings(BasePlugin):
     """College Football Rankings (AP / Coaches / CFP)
 
-    CFP support:
-      - Uses ESPN web API endpoint with required parameter ?type=2 for CFP.
-      - Optional year parameter (e.g., year=2024) supported via plugin setting.
+    CFP support (FIXED):
+      - Fetch CFP via: site.web.api.espn.com ... /rankings?type=2
+      - IMPORTANT: Some responses still include multiple poll blocks; we now explicitly select the CFP
+        poll block using id/type/name heuristics rather than taking the first item (which can be AP).
 
     Display:
-      - Font size selector: normal / large / larger / largest
-      - Two-column layout whenever Top N > 15
-      - Records auto-hidden when Top N > 20
-      - Team line shows logo + School (Nickname) with nickname styled smaller
+      - Font size selector
+      - Bold weights for e-ink
+      - Two columns when Top N > 15
+      - School logo + School name, nickname in smaller font
     """
 
     _cache: Dict[str, Any] = {"ts": {}, "data": {}}
@@ -42,7 +44,6 @@ class CfbRankings(BasePlugin):
         if font_size not in ("normal", "large", "larger", "largest"):
             font_size = "normal"
 
-        # Optional year (mainly for CFP endpoint)
         year = self._parse_year(settings.get("year"))
 
         show_record_user = self._to_bool(settings.get("show_record", True))
@@ -53,8 +54,6 @@ class CfbRankings(BasePlugin):
         ttl = cache_minutes * 60
 
         dimensions = self._get_dimensions(settings, device_config)
-
-        # Two-column layout whenever Top N > 15
         two_column = top_n > 15
 
         data, poll = self._get_poll_data(poll_choice, year, ttl)
@@ -97,18 +96,17 @@ class CfbRankings(BasePlugin):
 
     def _get_poll_data(self, poll_choice: str, year: Optional[int], ttl: int) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         if poll_choice == "cfp":
-            # Required: type=2 per user
-            url = f"{WEB_API_RANKINGS_URL}?type=2"
+            url = f"{WEB_API_RANKINGS_URL}?type={CFP_TYPE_ID}&lang=en&region=us"
             if year is not None:
                 url += f"&year={year}"
 
             data = self._fetch_json_cached(url, ttl)
-            poll = self._extract_poll_from_response(data)
+            poll = self._extract_cfp_poll(data)
             if poll is None:
-                raise RuntimeError("CFP poll not found in ESPN web API response.")
+                raise RuntimeError("CFP poll not found in ESPN web API response. Try setting a Year (e.g., 2024).")
             return data, poll
 
-        # AP/Coaches/Auto from site.api endpoint
+        # AP/Coaches/Auto
         data = self._fetch_json_cached(SITE_API_RANKINGS_URL, ttl)
         poll = self._select_poll(data, poll_choice)
         if poll is None:
@@ -132,27 +130,56 @@ class CfbRankings(BasePlugin):
 
         return data
 
-    def _extract_poll_from_response(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """CFP endpoint may return either a poll object or a container with rankings."""
+    # ----------------------------
+    # CFP poll extraction (FIX)
+    # ----------------------------
+
+    def _extract_cfp_poll(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Select the CFP poll block from the response.
+
+        The bug you saw (CFP showing AP) happens when the response contains multiple polls and
+        code picks the first. Here we explicitly choose the CFP poll.
+        """
         if not isinstance(data, dict):
             return None
 
-        # If response itself looks like a poll (has ranks)
-        if "ranks" in data and isinstance(data.get("ranks"), (list, dict)):
-            return data
+        def looks_like_cfp(p: Dict[str, Any]) -> bool:
+            if not isinstance(p, dict):
+                return False
+            # Match numeric identifiers
+            if str(p.get("id")) == str(CFP_TYPE_ID) or str(p.get("type")) == str(CFP_TYPE_ID):
+                return True
+            # Match string identifiers
+            t = str(p.get("type") or "").lower()
+            if t == "cfp":
+                return True
+            name = str(p.get("name") or "").lower()
+            short = str(p.get("shortName") or p.get("abbreviation") or "").lower()
+            head = str(p.get("headline") or p.get("shortHeadline") or "").lower()
+            blob = " ".join([name, short, head])
+            return ("playoff" in blob) or ("cfp" in blob) or ("selection committee" in blob)
 
+        # If data itself is poll-like
+        if "ranks" in data and isinstance(data.get("ranks"), (list, dict)):
+            # Only accept directly if it looks like CFP, otherwise continue search
+            if looks_like_cfp(data):
+                return data
+
+        # Common case: rankings list
         rankings = data.get("rankings")
         if isinstance(rankings, dict):
             rankings = rankings.get("items") or rankings.get("rankings")
-        if isinstance(rankings, list) and rankings:
-            # Often the response is a list of polls; take the first
-            first = rankings[0]
-            return first if isinstance(first, dict) else None
 
-        # Sometimes nested under 'ranking'
+        if isinstance(rankings, list):
+            # Prefer CFP match
+            for p in rankings:
+                if isinstance(p, dict) and looks_like_cfp(p):
+                    return p
+
+        # Sometimes nested
         ranking = data.get("ranking")
         if isinstance(ranking, dict) and "ranks" in ranking:
-            return ranking
+            return ranking if looks_like_cfp(ranking) else ranking
 
         return None
 
@@ -164,7 +191,6 @@ class CfbRankings(BasePlugin):
             ranks = poll.get("entries") or []
         if not isinstance(ranks, list):
             ranks = []
-        # Ensure list of dicts
         return [r for r in ranks if isinstance(r, dict)]
 
     # ----------------------------
@@ -275,9 +301,8 @@ class CfbRankings(BasePlugin):
                 return f"Updated {date_part} {time_part} • {label}"
             return f"Updated {date_part} {time_part}"
         except Exception:
-            label = (poll_name or "").strip()
-            if label:
-                return f"Updated {date_str} • {label}"
+            if poll_name:
+                return f"Updated {date_str} • {poll_name}"
             return f"Updated {date_str}"
 
     # ----------------------------
@@ -326,6 +351,7 @@ class CfbRankings(BasePlugin):
                 "logo": logo,
                 "record": rec if show_record else "",
             })
+
         return rows
 
     # ----------------------------
