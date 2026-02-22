@@ -15,6 +15,16 @@
 </div>
 
 <div class="form-group mt-3">
+  <label for="font_size" class="form-label">Font size</label>
+  <select class="form-select" id="font_size" name="font_size">
+    <option value="normal">Normal</option>
+    <option value="large">Large</option>
+    <option value="larger">Larger</option>
+    <option value="largest">Largest</option>
+  </select>
+</div>
+
+<div class="form-group mt-3">
   <label for="screen_size" class="form-label">Render size</label>
   <select class="form-select" id="screen_size" name="screen_size">
     <option value="auto">Auto (use device resolution)</option>
@@ -45,6 +55,7 @@
     if (loadPluginSettings) {
       document.getElementById('poll').value = pluginSettings.poll || 'auto';
       document.getElementById('top_n').value = pluginSettings.top_n || 20;
+      document.getElementById('font_size').value = pluginSettings.font_size || 'normal';
       document.getElementById('screen_size').value = pluginSettings.screen_size || 'auto';
       document.getElementById('show_record').checked = (pluginSettings.show_record ?? true);
       document.getElementById('show_meta').checked = (pluginSettings.show_meta ?? true);
@@ -52,6 +63,7 @@
     } else {
       document.getElementById('show_record').checked = true;
       document.getElementById('show_meta').checked = true;
+      document.getElementById('font_size').value = 'normal';
     }
   });
 </script>

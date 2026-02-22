@@ -7,23 +7,23 @@ from utils.http_client import get_http_session
 
 logger = logging.getLogger(__name__)
 
-# Primary ESPN endpoint for CFB rankings (unofficial/undocumented, may change)
 ESPN_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
 
 
 class CfbRankings(BasePlugin):
     """College Football Rankings (AP / Coaches / CFP)
 
-    Key behavior:
-      - CFP selection is handled by trying multiple ESPN URL variants so it works when ESPN exposes CFP
-        via a different query shape.
-      - If CFP is not currently published by ESPN, a clear RuntimeError message is shown.
-      - Two-column layout is enabled whenever Top N > 15.
-      - Team line shows logo + School (Nickname).
-      - Uses HTML/CSS render pipeline (style settings enabled).
+    Additions in v10:
+      - Font size selector: normal / large / larger / largest
+      - Uses the same clean sans-serif font family (Jost) used by other InkyPi plugins for e-ink readability.
+
+    Other behavior:
+      - Two-column layout whenever Top N > 15
+      - Records auto-hidden when Top N > 20
+      - Team line shows logo + School (Nickname)
+      - Uses HTML/CSS render pipeline with style settings enabled
     """
 
-    # Cache per URL to avoid hammering ESPN
     _cache: Dict[str, Any] = {"ts": {}, "data": {}}
 
     def generate_settings_template(self):
@@ -34,6 +34,11 @@ class CfbRankings(BasePlugin):
     def generate_image(self, settings: Dict[str, Any], device_config):
         poll_choice = (settings.get("poll") or "auto").strip().lower()
         top_n = max(1, min(25, int(settings.get("top_n") or 20)))
+
+        # Font size preference
+        font_size = (settings.get("font_size") or "normal").strip().lower()
+        if font_size not in ("normal", "large", "larger", "largest"):
+            font_size = "normal"
 
         show_record_user = self._to_bool(settings.get("show_record", True))
         show_meta = self._to_bool(settings.get("show_meta", True))
@@ -47,12 +52,7 @@ class CfbRankings(BasePlugin):
         # Two-column layout whenever Top N > 15
         two_column = top_n > 15
 
-        try:
-            data, poll, note = self._get_selected_poll_data(poll_choice, ttl)
-        except RuntimeError:
-            raise
-        except Exception as e:
-            raise RuntimeError(f"Failed to fetch rankings: {e}")
+        data, poll, note = self._get_selected_poll_data(poll_choice, ttl)
 
         poll_name = (poll.get("name") or poll.get("shortName") or "College Football Rankings").strip()
         title = poll_name
@@ -88,6 +88,7 @@ class CfbRankings(BasePlugin):
             "show_record": show_record,
             "two_column": two_column,
             "top_n": top_n,
+            "font_size": font_size,
             "plugin_settings": settings,
         }
 
@@ -98,8 +99,6 @@ class CfbRankings(BasePlugin):
     # ----------------------------
 
     def _get_selected_poll_data(self, poll_choice: str, ttl: int) -> Tuple[Dict[str, Any], Dict[str, Any], str]:
-        """Returns (data_json, poll_obj, note)."""
-        # Always fetch base first for AP/Coaches/Auto
         if poll_choice in ("auto", "ap", "coaches"):
             data = self._fetch_json_cached(ESPN_RANKINGS_URL, ttl)
             poll = self._select_poll(data, poll_choice)
@@ -107,7 +106,6 @@ class CfbRankings(BasePlugin):
                 raise RuntimeError("No suitable poll found in ESPN response.")
             return data, poll, ""
 
-        # CFP: try multiple URL variants because ESPN sometimes varies how CFP is exposed.
         if poll_choice == "cfp":
             urls = [
                 ESPN_RANKINGS_URL,
@@ -119,15 +117,12 @@ class CfbRankings(BasePlugin):
                 ESPN_RANKINGS_URL + "?seasontype=3",
             ]
 
-            # First pass: try to find a CFP poll in any response.
             for url in urls:
                 data = self._fetch_json_cached(url, ttl)
                 poll = self._select_poll(data, "cfp")
                 if poll:
-                    note = "" if url == ESPN_RANKINGS_URL else ""
-                    return data, poll, note
+                    return data, poll, ""
 
-            # Second pass: CFP not available -> raise a clearer error.
             raise RuntimeError(
                 "CFP ranking is not available from ESPN right now. "
                 "This typically means the selection committee rankings are not currently published for the active season/week."
@@ -181,12 +176,10 @@ class CfbRankings(BasePlugin):
             return 0.0
 
         def kind(p: Dict[str, Any]) -> str:
-            # Prefer stable type when present
             t = str(p.get("type") or "").lower()
             if t in ("ap", "coaches", "cfp"):
                 return t
 
-            # Otherwise infer from name/shortName/headline
             name = str(p.get("name") or "").lower()
             short = str(p.get("shortName") or p.get("abbreviation") or "").lower()
             head = str(p.get("headline") or "").lower()
@@ -207,7 +200,6 @@ class CfbRankings(BasePlugin):
             matches.sort(key=parse_date, reverse=True)
             return matches[0]
 
-        # AUTO: most recent among known kinds (tie-break CFP > AP > Coaches)
         order = {"cfp": 3, "ap": 2, "coaches": 1}
         candidates = [(parse_date(p), order.get(kind(p), 0), p) for p in polls if kind(p) in order]
         if candidates:
@@ -297,7 +289,6 @@ class CfbRankings(BasePlugin):
             if nickname and nickname.lower() not in school.lower():
                 display = f"{school} ({nickname})"
 
-            # Logo URL
             logo = ""
             logos = team.get("logos")
             if isinstance(logos, list) and logos:
