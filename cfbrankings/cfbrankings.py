@@ -7,25 +7,29 @@ from utils.http_client import get_http_session
 
 logger = logging.getLogger(__name__)
 
+# Primary ESPN endpoint for CFB rankings (unofficial/undocumented, may change)
 ESPN_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
 
 
 class CfbRankings(BasePlugin):
-    """College Football Rankings plugin (AP / Coaches / CFP)
+    """College Football Rankings (AP / Coaches / CFP)
 
-    - Poll: auto / AP / Coaches / CFP (auto picks most recent known poll)
-    - Top N: 1-25; records auto-hidden when Top N > 20
-    - 2-column layout whenever Top N > 15 (independent of record visibility)
-    - Renders via HTML/CSS with style settings enabled
-    - Team label shows "School (Nickname)"
+    Key behavior:
+      - CFP selection is handled by trying multiple ESPN URL variants so it works when ESPN exposes CFP
+        via a different query shape.
+      - If CFP is not currently published by ESPN, a clear RuntimeError message is shown.
+      - Two-column layout is enabled whenever Top N > 15.
+      - Team line shows logo + School (Nickname).
+      - Uses HTML/CSS render pipeline (style settings enabled).
     """
 
-    _cache: Dict[str, Any] = {"ts": 0.0, "key": None, "data": None}
+    # Cache per URL to avoid hammering ESPN
+    _cache: Dict[str, Any] = {"ts": {}, "data": {}}
 
     def generate_settings_template(self):
-        t = super().generate_settings_template()
-        t["style_settings"] = True
-        return t
+        params = super().generate_settings_template()
+        params["style_settings"] = True
+        return params
 
     def generate_image(self, settings: Dict[str, Any], device_config):
         poll_choice = (settings.get("poll") or "auto").strip().lower()
@@ -40,23 +44,20 @@ class CfbRankings(BasePlugin):
 
         dimensions = self._get_dimensions(settings, device_config)
 
-        # NEW: 2-column strictly when > 15 teams selected
+        # Two-column layout whenever Top N > 15
         two_column = top_n > 15
 
         try:
-            data = self._get_rankings_cached(ttl)
+            data, poll, note = self._get_selected_poll_data(poll_choice, ttl)
+        except RuntimeError:
+            raise
         except Exception as e:
             raise RuntimeError(f"Failed to fetch rankings: {e}")
 
-        poll = self._select_poll(data, poll_choice)
-        if not poll:
-            # Make the error user-visible as per InkyPi guidance
-            raise RuntimeError("No suitable poll found in ESPN response.")
-
-        poll_name = poll.get("name") or poll.get("shortName") or "College Football Rankings"
+        poll_name = (poll.get("name") or poll.get("shortName") or "College Football Rankings").strip()
         title = poll_name
 
-        # Extract ranks robustly (different polls have different shapes)
+        # Extract ranks robustly
         ranks = poll.get("ranks")
         if isinstance(ranks, dict):
             ranks = ranks.get("items") or ranks.get("entries") or ranks.get("ranks")
@@ -78,40 +79,86 @@ class CfbRankings(BasePlugin):
 
         poll_date = self._format_poll_date(poll, poll_name, device_config)
 
-        params = {
+        template_params = {
             "title": title,
             "meta": meta,
             "poll_date": poll_date,
+            "note": note,
             "rows": rows,
             "show_record": show_record,
             "two_column": two_column,
             "top_n": top_n,
             "plugin_settings": settings,
         }
-        return self.render_image(dimensions, "cfbrankings.html", "cfbrankings.css", params)
+
+        return self.render_image(dimensions, "cfbrankings.html", "cfbrankings.css", template_params)
 
     # ----------------------------
-    # Fetch/cache
+    # CFP-safe poll fetching
     # ----------------------------
-    def _get_rankings_cached(self, ttl: int) -> Dict[str, Any]:
+
+    def _get_selected_poll_data(self, poll_choice: str, ttl: int) -> Tuple[Dict[str, Any], Dict[str, Any], str]:
+        """Returns (data_json, poll_obj, note)."""
+        # Always fetch base first for AP/Coaches/Auto
+        if poll_choice in ("auto", "ap", "coaches"):
+            data = self._fetch_json_cached(ESPN_RANKINGS_URL, ttl)
+            poll = self._select_poll(data, poll_choice)
+            if not poll:
+                raise RuntimeError("No suitable poll found in ESPN response.")
+            return data, poll, ""
+
+        # CFP: try multiple URL variants because ESPN sometimes varies how CFP is exposed.
+        if poll_choice == "cfp":
+            urls = [
+                ESPN_RANKINGS_URL,
+                ESPN_RANKINGS_URL + "?type=cfp",
+                ESPN_RANKINGS_URL + "?types=cfp",
+                ESPN_RANKINGS_URL + "?poll=cfp",
+                ESPN_RANKINGS_URL + "?rankings=cfp",
+                ESPN_RANKINGS_URL + "?seasontype=2",
+                ESPN_RANKINGS_URL + "?seasontype=3",
+            ]
+
+            # First pass: try to find a CFP poll in any response.
+            for url in urls:
+                data = self._fetch_json_cached(url, ttl)
+                poll = self._select_poll(data, "cfp")
+                if poll:
+                    note = "" if url == ESPN_RANKINGS_URL else ""
+                    return data, poll, note
+
+            # Second pass: CFP not available -> raise a clearer error.
+            raise RuntimeError(
+                "CFP ranking is not available from ESPN right now. "
+                "This typically means the selection committee rankings are not currently published for the active season/week."
+            )
+
+        raise RuntimeError("Invalid poll selection.")
+
+    def _fetch_json_cached(self, url: str, ttl: int) -> Dict[str, Any]:
         now = time.time()
-        key = "rankings"
-        if ttl > 0 and self._cache["data"] is not None:
-            if self._cache["key"] == key and (now - self._cache["ts"]) < ttl:
-                return self._cache["data"]
+        ts = self._cache["ts"].get(url, 0.0)
+        if ttl > 0 and url in self._cache["data"] and (now - ts) < ttl:
+            return self._cache["data"][url]
+
         session = get_http_session()
-        resp = session.get(ESPN_RANKINGS_URL, timeout=20)
+        resp = session.get(url, timeout=20)
         resp.raise_for_status()
         data = resp.json()
+
         if ttl > 0:
-            self._cache.update({"ts": now, "key": key, "data": data})
+            self._cache["ts"][url] = now
+            self._cache["data"][url] = data
+
         return data
 
     # ----------------------------
-    # Poll selection (robust CFP matching)
+    # Poll selection
     # ----------------------------
+
     def _select_poll(self, data: Dict[str, Any], choice: str) -> Optional[Dict[str, Any]]:
         from datetime import datetime, timezone
+
         polls = data.get("rankings")
         if isinstance(polls, dict):
             polls = polls.get("items") or polls.get("rankings")
@@ -134,44 +181,46 @@ class CfbRankings(BasePlugin):
             return 0.0
 
         def kind(p: Dict[str, Any]) -> str:
-            # Some objects include a stable type field like "ap", "coaches", "cfp"
-            t = (p.get("type") or "").lower()
-            if t:
+            # Prefer stable type when present
+            t = str(p.get("type") or "").lower()
+            if t in ("ap", "coaches", "cfp"):
                 return t
-            # Otherwise examine names
-            name = (p.get("name") or "").lower()
-            short = (p.get("shortName") or p.get("abbreviation") or "").lower()
-            if "playoff" in name or "playoff" in short or "cfp" in name or "cfp" in short:
+
+            # Otherwise infer from name/shortName/headline
+            name = str(p.get("name") or "").lower()
+            short = str(p.get("shortName") or p.get("abbreviation") or "").lower()
+            head = str(p.get("headline") or "").lower()
+            blob = " ".join([name, short, head])
+
+            if "playoff" in blob or "cfp" in blob or "selection committee" in blob:
                 return "cfp"
-            if "ap" in name or short == "ap":
+            if "ap" in blob and "poll" in blob:
                 return "ap"
-            if "coaches" in name or "afca" in name or short == "coaches":
+            if "coaches" in blob or "afca" in blob:
                 return "coaches"
             return ""
 
-        # If user asked for a specific poll
         if choice in ("ap", "coaches", "cfp"):
             matches = [p for p in polls if kind(p) == choice]
-            if matches:
-                # pick most recent by date
-                matches.sort(key=parse_date, reverse=True)
-                return matches[0]
-            return None
+            if not matches:
+                return None
+            matches.sort(key=parse_date, reverse=True)
+            return matches[0]
 
-        # AUTO: prefer most recent among known kinds
-        candidates = [(parse_date(p), kind(p), p) for p in polls if kind(p) in ("cfp", "ap", "coaches")]
+        # AUTO: most recent among known kinds (tie-break CFP > AP > Coaches)
+        order = {"cfp": 3, "ap": 2, "coaches": 1}
+        candidates = [(parse_date(p), order.get(kind(p), 0), p) for p in polls if kind(p) in order]
         if candidates:
-            # sort by date, then prefer CFP over AP over Coaches if same date
-            order = {"cfp": 3, "ap": 2, "coaches": 1}
-            candidates.sort(key=lambda x: (x[0], order.get(x[1], 0)), reverse=True)
+            candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
             return candidates[0][2]
-        # As last resort return the most recent by date
+
         polls.sort(key=parse_date, reverse=True)
-        return polls[0] if polls else None
+        return polls[0]
 
     # ----------------------------
     # Date formatting
     # ----------------------------
+
     def _get_tzinfo(self, device_config):
         try:
             tz_name = device_config.get_config("timezone")
@@ -195,6 +244,7 @@ class CfbRankings(BasePlugin):
                 break
         if not date_str:
             return ""
+
         tzinfo = self._get_tzinfo(device_config)
         try:
             ds = date_str.replace("Z", "+00:00")
@@ -202,6 +252,7 @@ class CfbRankings(BasePlugin):
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             dt_local = dt.astimezone(tzinfo) if tzinfo else dt.astimezone()
+
             label = (poll_name or "").strip() or (poll.get("shortName") or "").strip() or (poll.get("name") or "").strip()
             hour = dt_local.strftime("%I").lstrip("0") or "12"
             minute = dt_local.strftime("%M")
@@ -221,14 +272,16 @@ class CfbRankings(BasePlugin):
             return f"Updated {date_str}"
 
     # ----------------------------
-    # Rows
+    # Rows (logo + School (Nickname))
     # ----------------------------
+
     def _build_rows(self, ranks: List[Dict[str, Any]], top_n: int, show_record: bool):
         rows = []
         if isinstance(ranks, dict):
             ranks = ranks.get("items") or ranks.get("entries") or ranks.get("ranks") or []
         if not isinstance(ranks, list):
             ranks = []
+
         for entry in ranks[:top_n]:
             if not isinstance(entry, dict):
                 continue
@@ -236,20 +289,48 @@ class CfbRankings(BasePlugin):
             team = entry.get("team") or entry.get("school") or {}
             if not isinstance(team, dict):
                 team = {}
-            school = team.get("shortDisplayName") or team.get("location") or team.get("abbreviation") or team.get("displayName") or team.get("name") or "Unknown"
+
+            school = team.get("shortDisplayName") or team.get("location") or team.get("displayName") or team.get("abbreviation") or team.get("name") or "Unknown"
             nickname = team.get("name") or team.get("nickname") or ""
-            team_display = school if not nickname or nickname.lower() in school.lower() else f"{school} ({nickname})"
+
+            display = school
+            if nickname and nickname.lower() not in school.lower():
+                display = f"{school} ({nickname})"
+
+            # Logo URL
+            logo = ""
+            logos = team.get("logos")
+            if isinstance(logos, list) and logos:
+                href = None
+                for item in logos:
+                    if not isinstance(item, dict):
+                        continue
+                    rel = item.get("rel")
+                    if isinstance(rel, list) and "default" in rel and item.get("href"):
+                        href = item.get("href")
+                        break
+                if not href:
+                    for item in logos:
+                        if isinstance(item, dict) and item.get("href"):
+                            href = item.get("href")
+                            break
+                logo = href or ""
+
             rec = entry.get("recordSummary") or entry.get("record") or ""
+
             rows.append({
                 "rank": rk if rk is not None else "--",
-                "team": team_display,
+                "team": display,
+                "logo": logo,
                 "record": rec if show_record else "",
             })
+
         return rows
 
     # ----------------------------
     # Dimensions / orientation
     # ----------------------------
+
     def _get_dimensions(self, settings: Dict[str, Any], device_config) -> Tuple[int, int]:
         screen_size = (settings.get("screen_size") or "auto").strip().lower()
         if screen_size == "800x480":
