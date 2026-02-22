@@ -3,18 +3,15 @@
   height: 100%;
   box-sizing: border-box;
   padding: 3dvh 3dvw;
-  /* E-ink friendly: clean sans-serif; prefer Jost */
   font-family: "Jost", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
 
   /* Bold defaults for e-ink legibility */
   font-weight: 600;
 
-  /* Base scale for row text; modified by font-* classes */
   --scale: 1.0;
   --title-scale: 1.0;
 }
 
-/* Font size variants */
 .font-normal { --scale: 1.00; --title-scale: 1.00; }
 .font-large  { --scale: 1.12; --title-scale: 1.08; }
 .font-larger { --scale: 1.25; --title-scale: 1.16; }
@@ -83,7 +80,6 @@
   width: calc(min(3.2dvh, 3.2dvw) * var(--scale));
   height: calc(min(3.2dvh, 3.2dvw) * var(--scale));
   object-fit: contain;
-  /* Improve legibility on monochrome e-ink */
   filter: grayscale(100%) contrast(125%);
 }
 
@@ -93,6 +89,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* School and nickname styling */
+.team .school {
+  font-weight: 800;
+}
+
+.team .nickname {
+  font-size: calc(min(2.2dvh, 2.2dvw) * var(--scale));
+  font-weight: 600;
+  opacity: 0.85;
+  margin-left: 0.35em;
 }
 
 .record {

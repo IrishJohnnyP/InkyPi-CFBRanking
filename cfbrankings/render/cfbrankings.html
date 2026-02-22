@@ -17,7 +17,12 @@
           {% if r.logo %}
             <img class="logo" src="{{ r.logo }}" alt="" />
           {% endif %}
-          <div class="team">{{ r.team }}</div>
+          <div class="team">
+            <span class="school">{{ r.school }}</span>
+            {% if r.nickname %}
+              <span class="nickname">({{ r.nickname }})</span>
+            {% endif %}
+          </div>
         </div>
         {% if show_record %}
           <div class="record">{{ r.record }}</div>
