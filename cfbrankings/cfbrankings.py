@@ -13,11 +13,10 @@ ESPN_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/coll
 class CfbRankings(BasePlugin):
     """College Football Rankings plugin.
 
-    - Selects AP/Coaches/CFP from ESPN rankings feed and always chooses the most recent poll instance.
-    - Movement (▲/▼ plus spots moved) is optional and uses current/previous ranks when provided.
-    - Nickname display is optional.
-    - Two columns when Top N > 15.
-    - Records auto-hidden when Top N > 20.
+    v20 fixes:
+      - Boolean settings are respected independently: record, nickname, movement.
+      - Record checkbox applies regardless of Top N (no auto-hide based on list size).
+      - Robust bool parsing (handles 'false' properly).
     """
 
     _cache: Dict[str, Any] = {"ts": 0.0, "data": None}
@@ -35,11 +34,10 @@ class CfbRankings(BasePlugin):
         if font_size not in ("normal", "large", "larger", "largest"):
             font_size = "normal"
 
-        show_record_user = self._to_bool(settings.get("show_record", True))
+        show_record = self._to_bool(settings.get("show_record", True))
         show_movement = self._to_bool(settings.get("show_movement", True))
         show_nickname = self._to_bool(settings.get("show_nickname", True))
         show_meta = self._to_bool(settings.get("show_meta", True))
-        show_record = bool(show_record_user and top_n <= 20)
 
         cache_minutes = max(0, min(1440, int(settings.get("cache_minutes") or 30)))
         ttl = cache_minutes * 60
@@ -79,9 +77,9 @@ class CfbRankings(BasePlugin):
             "poll_date": poll_date,
             "note": "",
             "rows": rows,
-            "show_record": show_record,
-            "show_movement": show_movement,
-            "show_nickname": show_nickname,
+            "show_record": bool(show_record),
+            "show_movement": bool(show_movement),
+            "show_nickname": bool(show_nickname),
             "two_column": two_column,
             "top_n": top_n,
             "font_size": font_size,
@@ -341,8 +339,20 @@ class CfbRankings(BasePlugin):
         return dims
 
     def _to_bool(self, v: Any) -> bool:
+        """Robust boolean parsing for plugin settings."""
         if isinstance(v, bool):
             return v
+        if v is None:
+            return False
+        # If multiple values somehow come through, prefer the last
+        if isinstance(v, (list, tuple)) and v:
+            v = v[-1]
         if isinstance(v, str):
-            return v.strip().lower() in ("1", "true", "yes", "on", "checked")
+            s = v.strip().lower()
+            if s in ("1", "true", "yes", "on", "checked"):
+                return True
+            if s in ("0", "false", "no", "off", ""):
+                return False
+            # fallback: non-empty string treated as True
+            return True
         return bool(v)
