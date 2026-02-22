@@ -4,19 +4,21 @@
 <div class="cfb-container {% if two_column %}two-column{% endif %}">
   <div class="header">
     <div class="title">{{ title }}</div>
-    {% if meta %}
-      <div class="meta">{{ meta }}</div>
-    {% endif %}
-    {% if poll_date %}
-      <div class="poll-date">{{ poll_date }}</div>
-    {% endif %}
+    {% if meta %}<div class="meta">{{ meta }}</div>{% endif %}
+    {% if poll_date %}<div class="poll-date">{{ poll_date }}</div>{% endif %}
+    {% if note %}<div class="note">{{ note }}</div>{% endif %}
   </div>
 
   <div class="list">
     {% for r in rows %}
       <div class="row">
         <div class="rank">{{ r.rank }}</div>
-        <div class="team">{{ r.team }}</div>
+        <div class="teamwrap">
+          {% if r.logo %}
+            <img class="logo" src="{{ r.logo }}" alt="" />
+          {% endif %}
+          <div class="team">{{ r.team }}</div>
+        </div>
         {% if show_record %}
           <div class="record">{{ r.record }}</div>
         {% endif %}

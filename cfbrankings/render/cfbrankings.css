@@ -16,13 +16,15 @@
 .title { font-size: min(4.0dvh, 4.0dvw); font-weight: 700; line-height: 1.1; }
 .meta { font-size: min(2.0dvh, 2.0dvw); opacity: 0.85; }
 .poll-date { font-size: min(1.8dvh, 1.8dvw); opacity: 0.8; }
+.note { font-size: min(1.8dvh, 1.8dvw); opacity: 0.75; font-style: italic; }
 
 .list { display: block; }
 
 .row {
-  display: flex;
-  align-items: baseline;
-  gap: 1.6dvw;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 1.6dvw;
   padding: 0.6dvh 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   break-inside: avoid;
@@ -30,9 +32,30 @@
   page-break-inside: avoid;
 }
 
-.rank { font-weight: 700; font-size: min(2.6dvh, 2.6dvw); width: 3ch; flex: 0 0 auto; }
-.team { font-size: min(2.6dvh, 2.6dvw); flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.record { font-size: min(2.2dvh, 2.2dvw); opacity: 0.9; white-space: nowrap; flex: 0 0 auto; }
+.rank { font-weight: 700; font-size: min(2.6dvh, 2.6dvw); width: 3ch; }
+
+.teamwrap {
+  display: flex;
+  align-items: center;
+  gap: 1.2dvw;
+  min-width: 0;
+}
+
+.logo {
+  width: min(3.2dvh, 3.2dvw);
+  height: min(3.2dvh, 3.2dvw);
+  object-fit: contain;
+  filter: grayscale(100%) contrast(120%);
+}
+
+.team {
+  font-size: min(2.6dvh, 2.6dvw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.record { font-size: min(2.2dvh, 2.2dvw); opacity: 0.9; white-space: nowrap; }
 
 .two-column .list { column-count: 2; column-gap: 4dvw; }
 .two-column .row { padding: 0.4dvh 0; }
