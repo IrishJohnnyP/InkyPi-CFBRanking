@@ -34,24 +34,29 @@
   </select>
 </div>
 
+<!-- Hidden inputs ensure the setting is saved even when the checkbox is unchecked -->
+<input type="hidden" name="show_record" value="false" />
 <div class="form-check mt-3">
-  <input class="form-check-input" type="checkbox" id="show_record" name="show_record">
+  <input class="form-check-input" type="checkbox" id="show_record" name="show_record" value="true">
   <label class="form-check-label" for="show_record">Show record</label>
   <small class="form-text text-muted d-block">Records are automatically hidden when Top N &gt; 20 to prevent crowding.</small>
 </div>
 
+<input type="hidden" name="show_movement" value="false" />
 <div class="form-check mt-2">
-  <input class="form-check-input" type="checkbox" id="show_movement" name="show_movement">
+  <input class="form-check-input" type="checkbox" id="show_movement" name="show_movement" value="true">
   <label class="form-check-label" for="show_movement">Show movement (▲/▼ spots)</label>
 </div>
 
+<input type="hidden" name="show_nickname" value="false" />
 <div class="form-check mt-2">
-  <input class="form-check-input" type="checkbox" id="show_nickname" name="show_nickname">
+  <input class="form-check-input" type="checkbox" id="show_nickname" name="show_nickname" value="true">
   <label class="form-check-label" for="show_nickname">Show nickname (in parentheses)</label>
 </div>
 
+<input type="hidden" name="show_meta" value="false" />
 <div class="form-check mt-2">
-  <input class="form-check-input" type="checkbox" id="show_meta" name="show_meta">
+  <input class="form-check-input" type="checkbox" id="show_meta" name="show_meta" value="true">
   <label class="form-check-label" for="show_meta">Show season/week (if available)</label>
 </div>
 
@@ -62,16 +67,27 @@
 </div>
 
 <script>
+  function toBool(v, fallback=true) {
+    if (v === undefined || v === null) return fallback;
+    if (typeof v === 'boolean') return v;
+    const s = String(v).toLowerCase().trim();
+    if (['1','true','yes','on','checked'].includes(s)) return true;
+    if (['0','false','no','off',''].includes(s)) return false;
+    return fallback;
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
-    if (loadPluginSettings) {
+    if (typeof loadPluginSettings !== 'undefined') {
       document.getElementById('poll').value = pluginSettings.poll || 'auto';
       document.getElementById('top_n').value = pluginSettings.top_n || 20;
       document.getElementById('font_size').value = pluginSettings.font_size || 'normal';
       document.getElementById('screen_size').value = pluginSettings.screen_size || 'auto';
-      document.getElementById('show_record').checked = (pluginSettings.show_record ?? true);
-      document.getElementById('show_movement').checked = (pluginSettings.show_movement ?? true);
-      document.getElementById('show_nickname').checked = (pluginSettings.show_nickname ?? true);
-      document.getElementById('show_meta').checked = (pluginSettings.show_meta ?? true);
+
+      document.getElementById('show_record').checked = toBool(pluginSettings.show_record, true);
+      document.getElementById('show_movement').checked = toBool(pluginSettings.show_movement, true);
+      document.getElementById('show_nickname').checked = toBool(pluginSettings.show_nickname, true);
+      document.getElementById('show_meta').checked = toBool(pluginSettings.show_meta, true);
+
       document.getElementById('cache_minutes').value = pluginSettings.cache_minutes || 30;
     } else {
       document.getElementById('show_record').checked = true;
