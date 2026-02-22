@@ -21,29 +21,31 @@
   margin-bottom: 2dvh;
 }
 
+/* Header layout: title left, updated timestamp right */
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2dvw;
+}
+
 .title {
   font-size: calc(min(4.0dvh, 4.0dvw) * var(--title-scale));
   font-weight: 800;
   line-height: 1.1;
+  min-width: 0;
 }
 
 .meta {
   font-size: calc(min(2.0dvh, 2.0dvw) * var(--scale));
-  font-weight: 600;
   opacity: 0.85;
 }
 
 .poll-date {
   font-size: calc(min(1.8dvh, 1.8dvw) * var(--scale));
-  font-weight: 600;
   opacity: 0.80;
-}
-
-.note {
-  font-size: calc(min(1.8dvh, 1.8dvw) * var(--scale));
-  font-weight: 600;
-  opacity: 0.75;
-  font-style: italic;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .list { display: block; }
@@ -91,19 +93,20 @@
 .team .school { font-weight: 800; }
 
 .team .nickname {
-  font-size: calc(min(2.2dvh, 2.2dvw) * var(--scale));
+  font-size: calc(min(1.95dvh, 1.95dvw) * var(--scale));
   font-weight: 600;
   opacity: 0.85;
   margin-left: 0.35em;
 }
 
 .record {
-  font-size: calc(min(2.2dvh, 2.2dvw) * var(--scale));
+  font-size: calc(min(1.95dvh, 1.95dvw) * var(--scale));
   font-weight: 700;
   opacity: 0.9;
   white-space: nowrap;
 }
 
+/* Rank movement arrows (after record) */
 .move {
   margin-left: 0.5ch;
   font-weight: 800;
@@ -116,7 +119,27 @@
 .two-column .list { column-count: 2; column-gap: 4dvw; }
 .two-column .row { padding: 0.4dvh 0; }
 
+/* Compact mode: tighter spacing for dense lists */
+.compact {
+  padding: 2dvh 2.2dvw;
+}
+
+.compact .header { margin-bottom: 1.2dvh; }
+.compact .row { padding: 0.35dvh 0; column-gap: 1.1dvw; }
+.compact.two-column .list { column-gap: 3dvw; }
+.compact .logo {
+  width: calc(min(2.8dvh, 2.8dvw) * var(--scale));
+  height: calc(min(2.8dvh, 2.8dvw) * var(--scale));
+}
+
 @media (max-aspect-ratio: 1) {
   .cfb-container { padding: 4dvh 4dvw; }
+  .compact { padding: 3dvh 3.5dvw; }
   .two-column .list { column-gap: 5dvw; }
+}
+
+
+/* Extra compact nickname sizing to reduce truncation */
+.compact .team .nickname {
+  font-size: calc(min(1.75dvh, 1.75dvw) * var(--scale));
 }

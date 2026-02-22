@@ -1,12 +1,13 @@
 {% extends "plugin.html" %}
 
 {% block content %}
-<div class="cfb-container font-{{ font_size }} {% if two_column %}two-column{% endif %}">
+<div class="cfb-container font-{{ font_size }}{% if compact_mode %} compact{% endif %} {% if two_column %}two-column{% endif %}">
   <div class="header">
-    <div class="title">{{ title }}</div>
+    <div class="topbar">
+      <div class="title">{{ title }}</div>
+      {% if poll_date %}<div class="poll-date">{{ poll_date }}</div>{% endif %}
+    </div>
     {% if meta %}<div class="meta">{{ meta }}</div>{% endif %}
-    {% if poll_date %}<div class="poll-date">{{ poll_date }}</div>{% endif %}
-    {% if note %}<div class="note">{{ note }}</div>{% endif %}
   </div>
 
   <div class="list">
