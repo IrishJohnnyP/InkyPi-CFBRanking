@@ -6,6 +6,13 @@
     <option value="coaches">Coaches Poll</option>
     <option value="cfp">CFP (Playoff)</option>
   </select>
+  <small class="form-text text-muted">CFP uses ESPN's web API with <code>?type=2</code>.</small>
+</div>
+
+<div class="form-group mt-3">
+  <label for="year" class="form-label">Year (optional)</label>
+  <input class="form-control" type="number" id="year" name="year" min="2000" max="2100" placeholder="Leave blank for current">
+  <small class="form-text text-muted">Optional: e.g., 2024 for historical data (works with CFP endpoint).</small>
 </div>
 
 <div class="form-group mt-3">
@@ -54,6 +61,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     if (loadPluginSettings) {
       document.getElementById('poll').value = pluginSettings.poll || 'auto';
+      document.getElementById('year').value = pluginSettings.year || '';
       document.getElementById('top_n').value = pluginSettings.top_n || 20;
       document.getElementById('font_size').value = pluginSettings.font_size || 'normal';
       document.getElementById('screen_size').value = pluginSettings.screen_size || 'auto';
