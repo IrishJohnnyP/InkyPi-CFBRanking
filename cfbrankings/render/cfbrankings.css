@@ -1,4 +1,3 @@
-/* Layout + typography (same as before) */
 .cfb-container { width:100%; height:100%; box-sizing:border-box; padding:3dvh 3dvw; font-family:"Jost", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-weight:600; --scale:1.0; --title-scale:1.0; }
 .font-normal { --scale:1.00; --title-scale:1.00; }
 .font-large  { --scale:1.12; --title-scale:1.08; }
@@ -14,7 +13,6 @@
 .rank { font-weight:800; font-size:calc(min(2.6dvh,2.6dvw) * var(--scale)); width:3ch; }
 .teamwrap { display:flex; align-items:center; gap:1.2dvw; min-width:0; }
 .logo { width: calc(min(3.2dvh, 3.2dvw) * var(--scale)); height: calc(min(3.2dvh, 3.2dvw) * var(--scale)); object-fit: contain; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; filter:none; }
-/* Keep optional mono look for B/W devices */
 .mono-logos .logo { filter: grayscale(100%) contrast(125%); }
 .team { font-size:calc(min(2.6dvh,2.6dvw) * var(--scale)); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .team .school{ font-weight:800; }
