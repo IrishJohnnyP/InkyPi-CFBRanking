@@ -1,42 +1,97 @@
-<div class="settings">
-  <label>Ranking source
-    <select name="poll">
-      <option value="auto">Auto (most recent available)</option>
-      <option value="ap">AP Top 25</option>
-      <option value="coaches">Coaches Poll</option>
-      <option value="cfp">CFP (Selection Committee)</option>
-    </select>
-  </label>
+<style>
+  .settings-grid { display:grid; gap:12px; align-items:flex-start; }
+  /* 3 columns on wide screens, 2 on medium, 1 on small */
+  @media (min-width: 1200px) { .settings-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (min-width: 700px) and (max-width: 1199px) { .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 699px) { .settings-grid { grid-template-columns: 1fr; } }
 
-  <label>List size (Top N)
-    <input type="number" name="top_n" min="1" max="25" value="20" />
-  </label>
+  .setting-card { border:1px solid #ddd; border-radius:8px; padding:12px; background:#fff; }
+  .setting-card h3 { margin:0 0 8px 0; font-size:1.05rem; }
+  .setting-row { display:flex; flex-direction:column; gap:8px; }
+  .checkbox { display:flex; align-items:center; gap:8px; }
+  .checkbox input[type="checkbox"] { transform: scale(1.05); }
+  .help { color:#666; font-size:0.9rem; margin-top:6px; }
+</style>
 
-  <label>Font size
-    <select name="font_size">
-      <option value="normal">Normal</option>
-      <option value="large">Large</option>
-      <option value="larger">Larger</option>
-      <option value="largest">Largest</option>
-    </select>
-  </label>
+<div class="settings-grid">
+  <div class="setting-card">
+    <h3>Poll & List</h3>
+    <div class="setting-row">
+      <label>Ranking source
+        <select name="poll">
+          <option value="auto">Auto (most recent available)</option>
+          <option value="ap">AP Top 25</option>
+          <option value="coaches">Coaches Poll</option>
+          <option value="cfp">CFP (Selection Committee)</option>
+        </select>
+      </label>
 
-  <label>Render size
-    <select name="screen_size">
-      <option value="auto">Auto (use device resolution)</option>
-      <option value="800x480">800 × 480</option>
-      <option value="1600x1200">1600 × 1200</option>
-    </select>
-  </label>
+      <label>List size (Top N)
+        <input type="number" name="top_n" min="1" max="25" value="20" />
+      </label>
+    </div>
+  </div>
 
-  <label class="checkbox"><input type="checkbox" name="show_record" checked /> Show record</label>
-  <label class="checkbox"><input type="checkbox" name="show_movement" checked /> Show movement (▲/▼ spots)</label>
-  <label class="checkbox"><input type="checkbox" name="show_nickname" checked /> Show nickname (in parentheses)</label>
-  <label class="checkbox"><input type="checkbox" name="show_meta" checked /> Show season/week (if available)</label>
-  <label class="checkbox"><input type="checkbox" name="compact_mode" /> Compact mode</label>
-  <label class="checkbox"><input type="checkbox" name="color_logos" checked /> Color logos</label>
+  <div class="setting-card">
+    <h3>Typography & Layout</h3>
+    <div class="setting-row">
+      <label>Font size
+        <select name="font_size">
+          <option value="normal">Normal</option>
+          <option value="large">Large</option>
+          <option value="larger">Larger</option>
+          <option value="largest">Largest</option>
+        </select>
+      </label>
 
-  <label>Cache (minutes)
-    <input type="number" name="cache_minutes" min="0" max="1440" value="30" />
-  </label>
+      <label>Render size
+        <select name="screen_size">
+          <option value="auto">Auto (use device resolution)</option>
+          <option value="800x480">800 × 480</option>
+          <option value="1600x1200">1600 × 1200</option>
+        </select>
+      </label>
+
+      <label class="checkbox">
+        <input type="hidden" name="compact_mode" value="0" />
+        <input type="checkbox" name="compact_mode" value="1" /> Compact mode
+      </label>
+    </div>
+  </div>
+
+  <div class="setting-card">
+    <h3>What to show</h3>
+    <div class="setting-row">
+      <label class="checkbox">
+        <input type="hidden" name="show_record" value="0" />
+        <input type="checkbox" name="show_record" value="1" checked /> Show record
+      </label>
+      <label class="checkbox">
+        <input type="hidden" name="show_movement" value="0" />
+        <input type="checkbox" name="show_movement" value="1" checked /> Show movement (▲/▼)
+      </label>
+      <label class="checkbox">
+        <input type="hidden" name="show_nickname" value="0" />
+        <input type="checkbox" name="show_nickname" value="1" checked /> Show nickname
+      </label>
+      <label class="checkbox">
+        <input type="hidden" name="show_meta" value="0" />
+        <input type="checkbox" name="show_meta" value="1" checked /> Show season/week
+      </label>
+    </div>
+  </div>
+
+  <div class="setting-card">
+    <h3>Logos & Cache</h3>
+    <div class="setting-row">
+      <label class="checkbox">
+        <input type="hidden" name="color_logos" value="0" />
+        <input type="checkbox" name="color_logos" value="1" checked /> Color logos
+      </label>
+      <label>Cache (minutes)
+        <input type="number" name="cache_minutes" min="0" max="1440" value="30" />
+      </label>
+      <div class="help">0 disables caching.</div>
+    </div>
+  </div>
 </div>
