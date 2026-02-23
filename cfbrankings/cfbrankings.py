@@ -39,9 +39,10 @@ class CfbRankings(BasePlugin):
         show_nickname = self._to_bool(settings.get("show_nickname", True))
         show_meta = self._to_bool(settings.get("show_meta", True))
         compact_mode = self._to_bool(settings.get("compact_mode", False))
-        color_logos = self._to_bool(settings.get(\"color_logos\", True))
 
-        cache_minutes = max(0, min(1440, int(settings.get("cache_minutes") or 30)))
+        
+        color_logos = self._to_bool(settings.get("color_logos", True))
+cache_minutes = max(0, min(1440, int(settings.get("cache_minutes") or 30)))
         ttl = cache_minutes * 60
 
         dimensions = self._get_dimensions(settings, device_config)
@@ -85,7 +86,6 @@ class CfbRankings(BasePlugin):
             "two_column": two_column,
             "top_n": top_n,
             "font_size": font_size,
-            \"color_logos\": bool(color_logos),
             "plugin_settings": settings,
         }
 
@@ -320,11 +320,11 @@ class CfbRankings(BasePlugin):
                 for item in logos:
                     if not isinstance(item, dict):
                         continue
-                    h = item.get("href")
-                    if not h:
+                    u = item.get("href")
+                    if not u:
                         continue
-                    if str(h).lower().endswith('.svg'):
-                        svg = h
+                    if str(u).lower().endswith(".svg"):
+                        svg = u
                     w = item.get("width") or 0
                     hgt = item.get("height") or 0
                     try:
@@ -332,7 +332,7 @@ class CfbRankings(BasePlugin):
                     except Exception:
                         area = 0
                     if area > best[0]:
-                        best = (area, h)
+                        best = (area, u)
                 if svg:
                     href = svg
                 else:
@@ -351,7 +351,6 @@ class CfbRankings(BasePlugin):
                                 href = item.get("href")
                                 break
                 logo = href or ""
-
             rec = entry.get("recordSummary") or entry.get("record") or ""
 
             rows.append({
