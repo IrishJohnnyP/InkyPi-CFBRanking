@@ -314,7 +314,6 @@ class CfbRankings(BasePlugin):
             logo = ""
             logos = team.get("logos")
             if isinstance(logos, list) and logos:
-                # Prefer SVG for crisp edges when renderer supports it; otherwise pick the largest raster.
                 href = None
                 svg = None
                 best = (0, None)  # (area, href)
@@ -337,7 +336,6 @@ class CfbRankings(BasePlugin):
                 if svg:
                     href = svg
                 else:
-                    # fall back to default rel if present
                     for item in logos:
                         if not isinstance(item, dict):
                             continue
