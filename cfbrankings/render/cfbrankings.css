@@ -79,23 +79,15 @@
   width: calc(min(3.2dvh, 3.2dvw) * var(--scale));
   height: calc(min(3.2dvh, 3.2dvw) * var(--scale));
   object-fit: contain;
-  /* Crisp scaling for small assets */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
 }
-
-/* Mono (B/W) e-ink friendly */
 .mono-logos .logo {
   filter: grayscale(100%) contrast(155%) brightness(1.08) drop-shadow(0 0 0.18dvh rgba(0,0,0,0.35));
 }
-
-/* Color e-ink clarity tuning (Impression 13.3 / Spectra 6) */
 .color-logos .logo {
-  /* Slight boost + subtle edge shadow to fight dithering washout */
   filter: saturate(1.55) contrast(1.30) brightness(1.07) drop-shadow(0 0 0.16dvh rgba(0,0,0,0.28));
 }
-
-/* Separation from the background (helps with light/white logos) */
 .color-logos .logo, .mono-logos .logo {
   background: rgba(255, 255, 255, 0.78);
   border: 1px solid rgba(0,0,0,0.10);

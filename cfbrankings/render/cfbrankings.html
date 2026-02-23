@@ -1,7 +1,8 @@
 {% extends "plugin.html" %}
 
 {% block content %}
-<div class=\"cfb-container font-{{ font_size }}{% if compact_mode %} compact{% endif %} {% if two_column %}two-column{% endif %}{% if color_logos %} color-logos{% else %} mono-logos{% endif %}\">
+{% set use_color = color_logos | default(true) %}
+<div class="cfb-container font-{{ font_size }}{% if compact_mode %} compact{% endif %} {% if two_column %}two-column{% endif %}">
   <div class="header">
     <div class="topbar">
       <div class="title">{{ title }}</div>
