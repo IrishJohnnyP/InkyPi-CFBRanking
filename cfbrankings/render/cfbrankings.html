@@ -1,35 +1,6 @@
 {% extends "plugin.html" %}
-
 {% block content %}
-<div class="cfb-container font-{{ font_size }}{% if compact_mode %} compact{% endif %} {% if two_column %}two-column{% endif %}">
-  <div class="header">
-    <div class="topbar">
-      <div class="title">{{ title }}</div>
-      {% if poll_date %}<div class="poll-date">{{ poll_date }}</div>{% endif %}
-    </div>
-    {% if meta %}<div class="meta">{{ meta }}</div>{% endif %}
-  </div>
+<div class="cfb-container color-logos">
 
-  <div class="list">
-    {% for r in rows %}
-      <div class="row">
-        <div class="rank">{{ r.rank }}</div>
-        <div class="teamwrap">
-          {% if r.logo %}
-            <img class="logo" src="{{ r.logo }}" alt="" />
-          {% endif %}
-          <div class="team">
-            <span class="school">{{ r.school }}</span>
-            {% if show_nickname and r.nickname %}
-              <span class="nickname">({{ r.nickname }})</span>
-            {% endif %}
-          </div>
-        </div>
-        {% if show_record %}
-          <div class="record">{{ r.record }}{% if show_movement %}{% if r.move_dir == 'up' %}<span class="move move-up">▲{{ r.move_delta }}</span>{% elif r.move_dir == 'down' %}<span class="move move-down">▼{{ r.move_delta }}</span>{% endif %}{% endif %}</div>
-        {% endif %}
-      </div>
-    {% endfor %}
-  </div>
 </div>
 {% endblock %}
