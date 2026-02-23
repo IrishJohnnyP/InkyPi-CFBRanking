@@ -1,27 +1,165 @@
+.cfb-container {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 3dvh 3dvw;
+  font-family: "Jost", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  font-weight: 600;
+  --scale: 1.0;
+  --title-scale: 1.0;
+}
 
+.font-normal { --scale: 1.00; --title-scale: 1.00; }
+.font-large  { --scale: 1.12; --title-scale: 1.08; }
+.font-larger { --scale: 1.25; --title-scale: 1.16; }
+.font-largest{ --scale: 1.40; --title-scale: 1.24; }
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6dvh;
+  margin-bottom: 2dvh;
+}
+
+/* Header layout: title left, updated timestamp right */
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 2dvw;
+}
+
+.title {
+  font-size: calc(min(4.0dvh, 4.0dvw) * var(--title-scale));
+  font-weight: 800;
+  line-height: 1.1;
+  min-width: 0;
+}
+
+.meta {
+  font-size: calc(min(2.0dvh, 2.0dvw) * var(--scale));
+  opacity: 0.85;
+}
+
+.poll-date {
+  font-size: calc(min(1.8dvh, 1.8dvw) * var(--scale));
+  opacity: 0.80;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.list { display: block; }
+
+.row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 1.6dvw;
+  padding: 0.6dvh 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.rank {
+  font-weight: 800;
+  font-size: calc(min(2.6dvh, 2.6dvw) * var(--scale));
+  width: 3ch;
+}
+
+.teamwrap {
+  display: flex;
+  align-items: center;
+  gap: 1.2dvw;
+  min-width: 0;
+}
 
 .logo {
   width: calc(min(3.2dvh, 3.2dvw) * var(--scale));
   height: calc(min(3.2dvh, 3.2dvw) * var(--scale));
   object-fit: contain;
-  /* keep edges crisp when downscaled */
+  /* Crisp scaling for small assets */
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
 }
 
 /* Mono (B/W) e-ink friendly */
 .mono-logos .logo {
-  filter: grayscale(100%) contrast(140%) brightness(1.05);
+  filter: grayscale(100%) contrast(155%) brightness(1.08) drop-shadow(0 0 0.18dvh rgba(0,0,0,0.35));
 }
 
-/* Color e-ink clarity tuning (Pimoroni Impression 13.3 / Spectra 6) */
+/* Color e-ink clarity tuning (Impression 13.3 / Spectra 6) */
 .color-logos .logo {
-  filter: saturate(1.45) contrast(1.25) brightness(1.06);
+  /* Slight boost + subtle edge shadow to fight dithering washout */
+  filter: saturate(1.55) contrast(1.30) brightness(1.07) drop-shadow(0 0 0.16dvh rgba(0,0,0,0.28));
 }
 
 /* Separation from the background (helps with light/white logos) */
 .color-logos .logo, .mono-logos .logo {
-  background: rgba(255, 255, 255, 0.70);
-  border-radius: 0.5dvh;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 0.55dvh;
   padding: 0.25dvh;
+}
+.team {
+  font-size: calc(min(2.6dvh, 2.6dvw) * var(--scale));
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team .school { font-weight: 800; }
+
+.team .nickname {
+  font-size: calc(min(1.95dvh, 1.95dvw) * var(--scale));
+  font-weight: 600;
+  opacity: 0.85;
+  margin-left: 0.35em;
+}
+
+.record {
+  font-size: calc(min(1.95dvh, 1.95dvw) * var(--scale));
+  font-weight: 700;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+/* Rank movement arrows (after record) */
+.move {
+  margin-left: 0.5ch;
+  font-weight: 800;
+  font-size: 1.05em;
+  letter-spacing: 0;
+}
+.move-up { color: #0a7d00; }
+.move-down { color: #b00020; }
+
+.two-column .list { column-count: 2; column-gap: 4dvw; }
+.two-column .row { padding: 0.4dvh 0; }
+
+/* Compact mode: tighter spacing for dense lists */
+.compact {
+  padding: 2dvh 2.2dvw;
+}
+
+.compact .header { margin-bottom: 1.2dvh; }
+.compact .row { padding: 0.35dvh 0; column-gap: 1.1dvw; }
+.compact.two-column .list { column-gap: 3dvw; }
+.compact .logo {
+  width: calc(min(2.8dvh, 2.8dvw) * var(--scale));
+  height: calc(min(2.8dvh, 2.8dvw) * var(--scale));
+}
+
+@media (max-aspect-ratio: 1) {
+  .cfb-container { padding: 4dvh 4dvw; }
+  .compact { padding: 3dvh 3.5dvw; }
+  .two-column .list { column-gap: 5dvw; }
+}
+
+
+/* Extra compact nickname sizing to reduce truncation */
+.compact .team .nickname {
+  font-size: calc(min(1.75dvh, 1.75dvw) * var(--scale));
 }
