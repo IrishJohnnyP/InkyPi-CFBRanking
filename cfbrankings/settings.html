@@ -1,132 +1,42 @@
-<div class="form-group">
-  <label for="poll" class="form-label">Ranking source</label>
-  <select class="form-select" id="poll" name="poll">
-    <option value="auto">Auto (most recent available)</option>
-    <option value="ap">AP Top 25</option>
-    <option value="coaches">Coaches Poll</option>
-    <option value="cfp">CFP (Selection Committee)</option>
-  </select>
-  <small class="form-text text-muted">All polls are selected from ESPN’s rankings feed; the plugin always chooses the <b>most recent</b> matching poll.</small>
+<div class="settings">
+  <label>Ranking source
+    <select name="poll">
+      <option value="auto">Auto (most recent available)</option>
+      <option value="ap">AP Top 25</option>
+      <option value="coaches">Coaches Poll</option>
+      <option value="cfp">CFP (Selection Committee)</option>
+    </select>
+  </label>
+
+  <label>List size (Top N)
+    <input type="number" name="top_n" min="1" max="25" value="20" />
+  </label>
+
+  <label>Font size
+    <select name="font_size">
+      <option value="normal">Normal</option>
+      <option value="large">Large</option>
+      <option value="larger">Larger</option>
+      <option value="largest">Largest</option>
+    </select>
+  </label>
+
+  <label>Render size
+    <select name="screen_size">
+      <option value="auto">Auto (use device resolution)</option>
+      <option value="800x480">800 × 480</option>
+      <option value="1600x1200">1600 × 1200</option>
+    </select>
+  </label>
+
+  <label class="checkbox"><input type="checkbox" name="show_record" checked /> Show record</label>
+  <label class="checkbox"><input type="checkbox" name="show_movement" checked /> Show movement (▲/▼ spots)</label>
+  <label class="checkbox"><input type="checkbox" name="show_nickname" checked /> Show nickname (in parentheses)</label>
+  <label class="checkbox"><input type="checkbox" name="show_meta" checked /> Show season/week (if available)</label>
+  <label class="checkbox"><input type="checkbox" name="compact_mode" /> Compact mode</label>
+  <label class="checkbox"><input type="checkbox" name="color_logos" checked /> Color logos (improve clarity on color e‑ink)</label>
+
+  <label>Cache (minutes)
+    <input type="number" name="cache_minutes" min="0" max="1440" value="30" />
+  </label>
 </div>
-
-<div class="form-group mt-3">
-  <label for="top_n" class="form-label">List size (Top N)</label>
-  <input class="form-control" type="number" id="top_n" name="top_n" min="1" max="25" value="20">
-  <small class="form-text text-muted">1–25 (default 20)</small>
-</div>
-
-<div class="form-group mt-3">
-  <label for="font_size" class="form-label">Font size</label>
-  <select class="form-select" id="font_size" name="font_size">
-    <option value="normal">Normal</option>
-    <option value="large">Large</option>
-    <option value="larger">Larger</option>
-    <option value="largest">Largest</option>
-  </select>
-</div>
-
-<div class="form-group mt-3">
-  <label for="screen_size" class="form-label">Render size</label>
-  <select class="form-select" id="screen_size" name="screen_size">
-    <option value="auto">Auto (use device resolution)</option>
-    <option value="800x480">800 × 480</option>
-    <option value="1600x1200">1600 × 1200</option>
-  </select>
-</div>
-
-<!-- Hidden fields are the single source of truth for boolean settings -->
-<input type="hidden" id="show_record" name="show_record" value="true" />
-<input type="hidden" id="show_movement" name="show_movement" value="true" />
-<input type="hidden" id="show_nickname" name="show_nickname" value="true" />
-<input type="hidden" id="show_meta" name="show_meta" value="true" />
-<input type="hidden" id="compact_mode" name="compact_mode" value="false" />
-
-<div class="form-check mt-3">
-  <input class="form-check-input" type="checkbox" id="show_record_checkbox">
-  <label class="form-check-label" for="show_record_checkbox">Show record</label>
-  <small class="form-text text-muted d-block">Applies regardless of Top N.</small>
-</div>
-
-<div class="form-check mt-2">
-  <input class="form-check-input" type="checkbox" id="show_movement_checkbox">
-  <label class="form-check-label" for="show_movement_checkbox">Show movement (▲/▼ spots)</label>
-</div>
-
-<div class="form-check mt-2">
-  <input class="form-check-input" type="checkbox" id="show_nickname_checkbox">
-  <label class="form-check-label" for="show_nickname_checkbox">Show nickname (in parentheses)</label>
-</div>
-
-<div class="form-check mt-2">
-  <input class="form-check-input" type="checkbox" id="show_meta_checkbox">
-  <label class="form-check-label" for="show_meta_checkbox">Show season/week (if available)</label>
-</div>
-
-<div class="form-check mt-2">
-  <input class="form-check-input" type="checkbox" id="compact_mode_checkbox">
-  <label class="form-check-label" for="compact_mode_checkbox">Compact mode</label>
-  <small class="form-text text-muted d-block">Tighter spacing for Top 25 / larger fonts.</small>
-</div>
-
-<div class="form-group mt-3">
-  <label for="cache_minutes" class="form-label">Cache (minutes)</label>
-  <input class="form-control" type="number" id="cache_minutes" name="cache_minutes" min="0" max="1440" value="30">
-  <small class="form-text text-muted">0 disables caching.</small>
-</div>
-
-<script>
-  function toBool(v, fallback=true) {
-    if (v === undefined || v === null) return fallback;
-    if (typeof v === 'boolean') return v;
-    const s = String(v).toLowerCase().trim();
-    if (['1','true','yes','on','checked'].includes(s)) return true;
-    if (['0','false','no','off',''].includes(s)) return false;
-    return fallback;
-  }
-
-  function syncHidden(hiddenId, checkboxId) {
-    const hidden = document.getElementById(hiddenId);
-    const cb = document.getElementById(checkboxId);
-    if (!hidden || !cb) return;
-    hidden.value = cb.checked ? 'true' : 'false';
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    if (typeof loadPluginSettings !== 'undefined') {
-      document.getElementById('poll').value = pluginSettings.poll || 'auto';
-      document.getElementById('top_n').value = pluginSettings.top_n || 20;
-      document.getElementById('font_size').value = pluginSettings.font_size || 'normal';
-      document.getElementById('screen_size').value = pluginSettings.screen_size || 'auto';
-
-      document.getElementById('show_record_checkbox').checked = toBool(pluginSettings.show_record, true);
-      document.getElementById('show_movement_checkbox').checked = toBool(pluginSettings.show_movement, true);
-      document.getElementById('show_nickname_checkbox').checked = toBool(pluginSettings.show_nickname, true);
-      document.getElementById('show_meta_checkbox').checked = toBool(pluginSettings.show_meta, true);
-      document.getElementById('compact_mode_checkbox').checked = toBool(pluginSettings.compact_mode, false);
-
-      document.getElementById('cache_minutes').value = pluginSettings.cache_minutes || 30;
-    } else {
-      document.getElementById('show_record_checkbox').checked = true;
-      document.getElementById('show_movement_checkbox').checked = true;
-      document.getElementById('show_nickname_checkbox').checked = true;
-      document.getElementById('show_meta_checkbox').checked = true;
-      document.getElementById('compact_mode_checkbox').checked = false;
-    }
-
-    // init hidden values
-    syncHidden('show_record','show_record_checkbox');
-    syncHidden('show_movement','show_movement_checkbox');
-    syncHidden('show_nickname','show_nickname_checkbox');
-    syncHidden('show_meta','show_meta_checkbox');
-    syncHidden('compact_mode','compact_mode_checkbox');
-
-    // keep in sync
-    document.getElementById('show_record_checkbox').addEventListener('change', () => syncHidden('show_record','show_record_checkbox'));
-    document.getElementById('show_movement_checkbox').addEventListener('change', () => syncHidden('show_movement','show_movement_checkbox'));
-    document.getElementById('show_nickname_checkbox').addEventListener('change', () => syncHidden('show_nickname','show_nickname_checkbox'));
-    document.getElementById('show_meta_checkbox').addEventListener('change', () => syncHidden('show_meta','show_meta_checkbox'));
-    document.getElementById('compact_mode_checkbox').addEventListener('change', () => syncHidden('compact_mode','compact_mode_checkbox'));
-  });
-</script>
-
-<label class="checkbox"><input type="checkbox" name="color_logos" checked /> Color logos (sharper on color e‑ink)</label>
