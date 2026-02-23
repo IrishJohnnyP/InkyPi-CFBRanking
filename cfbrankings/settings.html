@@ -46,9 +46,12 @@
           <option value="1600x1200">1600 × 1200</option>
         </select>
       </label>
+
+      <!-- CHECKBOX first, hidden fallback second -->
       <label class="checkbox">
+        <input type="checkbox" name="compact_mode" value="1" />
         <input type="hidden" name="compact_mode" value="0" />
-        <input type="checkbox" name="compact_mode" value="1" /> Compact mode
+        Compact mode
       </label>
     </div>
   </div>
@@ -57,20 +60,24 @@
     <h3>What to show</h3>
     <div class="setting-row">
       <label class="checkbox">
+        <input type="checkbox" name="show_record" value="1" checked />
         <input type="hidden" name="show_record" value="0" />
-        <input type="checkbox" name="show_record" value="1" checked /> Show record
+        Show record
       </label>
       <label class="checkbox">
+        <input type="checkbox" name="show_movement" value="1" checked />
         <input type="hidden" name="show_movement" value="0" />
-        <input type="checkbox" name="show_movement" value="1" checked /> Show movement (▲/▼)
+        Show movement (▲/▼)
       </label>
       <label class="checkbox">
+        <input type="checkbox" name="show_nickname" value="1" checked />
         <input type="hidden" name="show_nickname" value="0" />
-        <input type="checkbox" name="show_nickname" value="1" checked /> Show nickname
+        Show nickname
       </label>
       <label class="checkbox">
+        <input type="checkbox" name="show_meta" value="1" checked />
         <input type="hidden" name="show_meta" value="0" />
-        <input type="checkbox" name="show_meta" value="1" checked /> Show season/week
+        Show season/week
       </label>
     </div>
   </div>
@@ -79,13 +86,14 @@
     <h3>Logos & Cache</h3>
     <div class="setting-row">
       <label class="checkbox">
+        <input type="checkbox" name="color_logos" value="1" checked />
         <input type="hidden" name="color_logos" value="0" />
-        <input type="checkbox" name="color_logos" value="1" checked /> Color logos
+        Color logos
       </label>
       <label>Cache (minutes)
         <input type="number" name="cache_minutes" min="0" max="1440" value="30" />
       </label>
-      <div class="help">Tip: set 0 while testing settings to see changes immediately.</div>
+      <div class="help">Tip: set 0 while testing to see changes immediately.</div>
     </div>
   </div>
 </div>

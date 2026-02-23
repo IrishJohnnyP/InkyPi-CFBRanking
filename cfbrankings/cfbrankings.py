@@ -10,12 +10,6 @@ logger = logging.getLogger(__name__)
 ESPN_RANKINGS_URL = "https://site.api.espn.com/apis/site/v2/sports/football/college-football/rankings"
 
 class CfbRankings(BasePlugin):
-    """College Football Rankings plugin (color logos, no sharpening).
-    - Picks AP/Coaches/CFP from ESPN's feed; chooses most recent instance.
-    - Toggles: record, movement, nickname, meta (season/week), compact, color logos.
-    - Responsive list; updated timestamp shown if available.
-    """
-
     _cache: Dict[str, Any] = {"ts": 0.0, "data": None}
 
     def generate_settings_template(self):
@@ -82,9 +76,6 @@ class CfbRankings(BasePlugin):
         }
         return self.render_image(dimensions, "cfbrankings.html", "cfbrankings.css", template_params)
 
-    # ----------------------------
-    # Fetch/cache
-    # ----------------------------
     def _get_rankings_cached(self, ttl: int) -> Dict[str, Any]:
         now = time.time()
         if ttl > 0 and self._cache["data"] is not None and (now - self._cache["ts"]) < ttl:
@@ -98,9 +89,6 @@ class CfbRankings(BasePlugin):
             self._cache["data"] = data
         return data
 
-    # ----------------------------
-    # Poll selection (most recent)
-    # ----------------------------
     def _pick_polls(self, data: Dict[str, Any], choice: str) -> Optional[Dict[str, Any]]:
         polls = data.get("rankings")
         if isinstance(polls, dict):
@@ -206,9 +194,6 @@ class CfbRankings(BasePlugin):
             ranks = []
         return [r for r in ranks if isinstance(r, dict)]
 
-    # ----------------------------
-    # Date formatting
-    # ----------------------------
     def _get_tzinfo(self, device_config):
         try:
             tz_name = device_config.get_config("timezone")
@@ -249,11 +234,8 @@ class CfbRankings(BasePlugin):
         except Exception:
             return date_str
 
-    # ----------------------------
-    # Build rows
-    # ----------------------------
     def _build_rows(self, ranks: List[Dict[str, Any]], top_n: int, show_record: bool):
-        rows: List[Dict[str, Any]] = []
+        rows = []
 
         def _to_int(x):
             try:
@@ -296,7 +278,6 @@ class CfbRankings(BasePlugin):
             if nickname and nickname.lower() not in str(school).lower():
                 nick_out = nickname
 
-            # Logos: use ESPN default rel first, else first href
             logo = ""
             logos = team.get("logos")
             if isinstance(logos, list) and logos:
@@ -327,9 +308,6 @@ class CfbRankings(BasePlugin):
             })
         return rows
 
-    # ----------------------------
-    # Utilities
-    # ----------------------------
     def _get_dimensions(self, settings: Dict[str, Any], device_config) -> Tuple[int, int]:
         screen_size = (settings.get("screen_size") or "auto").strip().lower()
         if screen_size == "800x480":
