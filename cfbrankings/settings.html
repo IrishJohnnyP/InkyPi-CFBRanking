@@ -1,99 +1,38 @@
-<style>
-  .settings-grid { display:grid; gap:12px; align-items:flex-start; }
-  @media (min-width: 1200px) { .settings-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (min-width: 700px) and (max-width: 1199px) { .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 699px) { .settings-grid { grid-template-columns: 1fr; } }
-  .setting-card { border:1px solid #ddd; border-radius:8px; padding:12px; background:#fff; }
-  .setting-card h3 { margin:0 0 8px 0; font-size:1.05rem; }
-  .setting-row { display:flex; flex-direction:column; gap:8px; }
-  .checkbox { display:flex; align-items:center; gap:8px; }
-  .help { color:#666; font-size:0.9rem; margin-top:6px; }
-</style>
+<div class="form-grid">
+  <p><strong>Layout:</strong> Large mode (fixed). Font size and presets have been removed.</p>
 
-<div class="settings-grid">
-  <div class="setting-card">
-    <h3>Poll & List</h3>
-    <div class="setting-row">
-      <label>Ranking source
-        <select name="poll">
-          <option value="auto">Auto (most recent available)</option>
-          <option value="ap">AP Top 25</option>
-          <option value="coaches">Coaches Poll</option>
-          <option value="cfp">CFP (Selection Committee)</option>
-        </select>
-      </label>
-      <label>List size (Top N)
-        <input type="number" name="top_n" min="1" max="25" value="20" />
-      </label>
-    </div>
+  <div class="form-group">
+    <label for="season_year">Season year</label>
+    <input id="season_year" name="season_year" type="number" min="2000" max="2100" value="{{ settings.get('season_year', '') }}" placeholder="2026" />
   </div>
 
-  <div class="setting-card">
-    <h3>Typography & Layout</h3>
-    <div class="setting-row">
-      <label>Font size
-        <select name="font_size">
-          <option value="normal">Normal</option>
-          <option value="large">Large</option>
-          <option value="larger">Larger</option>
-          <option value="largest">Largest</option>
-        </select>
-      </label>
-      <label>Render size
-        <select name="screen_size">
-          <option value="auto">Auto (use device resolution)</option>
-          <option value="800x480">800 × 480</option>
-          <option value="1600x1200">1600 × 1200</option>
-        </select>
-      </label>
-
-      <!-- CHECKBOX first, hidden fallback second -->
-      <label class="checkbox">
-        <input type="checkbox" name="compact_mode" value="1" />
-        <input type="hidden" name="compact_mode" value="0" />
-        Compact mode
-      </label>
-    </div>
+  <div class="form-group">
+    <label for="show_time">Show game time</label>
+    <input id="show_time" name="show_time" type="checkbox" value="true" {{ 'checked' if settings.get('show_time', True) else '' }} />
   </div>
 
-  <div class="setting-card">
-    <h3>What to show</h3>
-    <div class="setting-row">
-      <label class="checkbox">
-        <input type="checkbox" name="show_record" value="1" checked />
-        <input type="hidden" name="show_record" value="0" />
-        Show record
-      </label>
-      <label class="checkbox">
-        <input type="checkbox" name="show_movement" value="1" checked />
-        <input type="hidden" name="show_movement" value="0" />
-        Show movement (▲/▼)
-      </label>
-      <label class="checkbox">
-        <input type="checkbox" name="show_nickname" value="1" checked />
-        <input type="hidden" name="show_nickname" value="0" />
-        Show nickname
-      </label>
-      <label class="checkbox">
-        <input type="checkbox" name="show_meta" value="1" checked />
-        <input type="hidden" name="show_meta" value="0" />
-        Show season/week
-      </label>
-    </div>
+  <div class="form-group">
+    <label for="show_rank">Show opponent rank</label>
+    <input id="show_rank" name="show_rank" type="checkbox" value="true" {{ 'checked' if settings.get('show_rank', True) else '' }} />
   </div>
 
-  <div class="setting-card">
-    <h3>Logos & Cache</h3>
-    <div class="setting-row">
-      <label class="checkbox">
-        <input type="checkbox" name="color_logos" value="1" checked />
-        <input type="hidden" name="color_logos" value="0" />
-        Color logos
-      </label>
-      <label>Cache (minutes)
-        <input type="number" name="cache_minutes" min="0" max="1440" value="30" />
-      </label>
-      <div class="help">Tip: set 0 while testing to see changes immediately.</div>
-    </div>
+  <div class="form-group">
+    <label for="hide_rank">Hide rank in list</label>
+    <input id="hide_rank" name="hide_rank" type="checkbox" value="true" {{ 'checked' if settings.get('hide_rank', False) else '' }} />
+  </div>
+
+  <div class="form-group">
+    <label for="hide_nickname">Hide nickname in list</label>
+    <input id="hide_nickname" name="hide_nickname" type="checkbox" value="true" {{ 'checked' if settings.get('hide_nickname', False) else '' }} />
+  </div>
+
+  <div class="form-group">
+    <label for="hide_logo">Hide opponent logo</label>
+    <input id="hide_logo" name="hide_logo" type="checkbox" value="true" {{ 'checked' if settings.get('hide_logo', False) else '' }} />
+  </div>
+
+  <div class="form-group">
+    <label for="cache_minutes">Cache (minutes)</label>
+    <input id="cache_minutes" name="cache_minutes" type="number" min="0" max="1440" value="{{ settings.get('cache_minutes', 30) }}" />
   </div>
 </div>
