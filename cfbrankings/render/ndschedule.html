@@ -1,0 +1,50 @@
+{% extends "plugin.html" %}
+{% block content %}
+<div class="nd-container">
+  <div class="header">
+    <div class="titlewrap">
+      {% if not hide_logo and nd_logo %}
+        <!-- Optional logo (header); hidden if hide_logo is true -->
+        <img src="{{ nd_logo }}" alt="Notre Dame logo" class="title-logo"/>
+      {% endif %}
+      <div class="title">{{ title }}</div>
+    </div>
+    {% if update_line %}
+      <div class="update-line">{{ update_line }}</div>
+    {% endif %}
+  </div>
+
+  <div class="colhdr">
+    <div class="h">{% if show_time %}DATE / TIME{% else %}DATE{% endif %}</div>
+    <div class="h">OPPONENT</div>
+    <div class="h">RECORD</div>
+    <div class="h">SITE</div>
+    <div class="h">RESULT</div>
+  </div>
+  <div class="sep"></div>
+
+  {% for g in rows %}
+    <div class="row">
+      <div class="date">{{ g.date }}</div>
+      <div class="opp">
+        {% if (not hide_rank) and g.opp_rank %}
+          <div class="rank">#{{ g.opp_rank }}</div>
+        {% endif %}
+        {% if (not hide_logo) and g.logo %}
+          <img class="logo" src="{{ g.logo }}" alt="{{ g.opp_school }} logo"/>
+        {% endif %}
+        <div class="school">{{ g.opp_school }}</div>
+        {% if (not hide_nickname) and g.opp_nickname %}
+          <div class="nickname">({{ g.opp_nickname }})</div>
+        {% endif %}
+      </div>
+      <div class="rec">{% if g.opp_record %}{{ g.opp_record }}{% endif %}</div>
+      <div class="site">{{ g.site }}</div>
+      <div class="result {{ g.result_class }}">{{ g.result }}</div>
+    </div>
+    {% if not loop.last %}<div class="sep"></div>{% endif %}
+  {% endfor %}
+
+  <div class="footnote">* All times Eastern</div>
+</div>
+{% endblock %}
