@@ -1,6 +1,5 @@
 {
-  "display_name": "Notre Dame Schedule",
-  "id": "ndschedule",
-  "class": "NdSchedule",
-  "repository": "https://github.com/IrishJohnnyP/InkyPi-NDSchedule"
+  "display_name": "CFB Rankings",
+  "id": "cfbrankings",
+  "class": "CfbRankings"
 }
